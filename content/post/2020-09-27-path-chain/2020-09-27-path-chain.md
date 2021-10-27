@@ -8,10 +8,13 @@ date: '2020-09-27'
 featured_image: /post/2020-09-27-path-chain/path-chain-logo.png
 slug: content/post/2020-09-27-path-chain/2020-09-27-path-chain
 ---
-<a href="https://krzjoa.github.io/path.chain"><img src='https://raw.githubusercontent.com/krzjoa/path.chain/master/man/figures/logo.png' align="right" height="139" style="height:139px;" /></a>
+<a href="https://krzjoa.github.io/path.chain"><img src='https://raw.githubusercontent.com/krzjoa/path.chain/master/man/figures/logo.png' align="left" height="139" style="margin-right: 20px" /></a>
 `path.chain` package provides an intuitive and easy-to-use system of
 nested objects, which represents different levels of some directory’s
-structure in the file system. It allows us to
+structure in the file system. It allows us to created a nested structure, which returns a string
+from every its leaf.
+
+<br/>
 
 Look at the `path.chain`
 ------------------------
@@ -22,6 +25,8 @@ exactly the case.
 <center>
 <img src='https://raw.githubusercontent.com/krzjoa/path.chain/master/man/figures/path_chain.gif'/>
 </center>
+
+
 Motivation
 ----------
 

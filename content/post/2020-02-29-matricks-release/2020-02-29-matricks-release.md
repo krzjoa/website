@@ -10,7 +10,7 @@ featured_image: /post/2020-02-29-matricks-release/matricks-logo.png
 slug: content/post/2020-02-29-matricks-release/2020-02-29-matricks-release
 ---
 
-<a href="https://krzjoa.github.io/matricks"><img src='https://raw.githubusercontent.com/krzjoa/matricks/master/man/figures/logo.png' align="right" height="139" style="height:139px;" /></a>
+<a href="https://krzjoa.github.io/matricks"><img src='https://raw.githubusercontent.com/krzjoa/matricks/master/man/figures/logo.png' align="left" height="139" style="margin-right: 20px" /></a>
 `matricks` package in **0.8.2** version has been released on CRAN! In
 this post I will present you, what are advantages of using `matricks`
 and how you can use it.
