@@ -28,7 +28,8 @@ jobs:
         run: hugo --minify
 
       - name: Copy feed.r.bloggers.xml
-        run: cp /home/runner/work/website/post/index.xml /home/runner/work/website/lol.xml
+        run: |
+          find . -name 'index.xml' -exec cp "{}" ${GITHUB_WORKSPACE}/lol.xml
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
