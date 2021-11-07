@@ -1,5 +1,5 @@
 ---
-title: Time Series & PyTorch - Training network to compute moving average (LOL2)
+title: Time Series & PyTorch - Training network to compute moving average (LOL6)
 tags:
   - EN
   - Python
