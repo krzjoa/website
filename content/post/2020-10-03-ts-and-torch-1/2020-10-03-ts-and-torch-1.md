@@ -1,5 +1,5 @@
 ---
-title: 'Time Series & torch #1 - Training a network to compute moving average LOL2'
+title: 'Time Series & torch #1 - Training a network to compute moving average'
 tags:
   - EN
   - R

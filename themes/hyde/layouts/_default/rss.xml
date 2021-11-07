@@ -1,4 +1,3 @@
-
 {{- $pctx := . -}}
 {{- if .IsHome -}}{{ $pctx = .Site }}{{- end -}}
 {{- $pages := slice -}}
@@ -37,3 +36,4 @@
     </item>
     {{ end }}
   </channel>
+</rss>
