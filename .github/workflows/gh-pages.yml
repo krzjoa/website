@@ -27,6 +27,9 @@ jobs:
       - name: Build
         run: hugo --minify
 
+      - name: Copy feed.r.bloggers.xml
+        run: cp ${GITHUB_WORKSPACE}/post/index.xml ${GITHUB_WORKSPACE}/lol.xml
+
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         if: ${{ github.ref == 'refs/heads/main' }}
@@ -36,3 +39,5 @@ jobs:
           external_repository: krzjoa/krzjoa.github.io
           #   keep_files: true
           publish_branch: blogdown
+
+
