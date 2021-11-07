@@ -29,11 +29,7 @@ jobs:
 
       - name: Copy feed.r.bloggers.xml
         run: |
-          find . -name 'index.xml' -exec cp "{}" ${GITHUB_WORKSPACE}/lol.xml  \;
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add  ${GITHUB_WORKSPACE}/lol.xml
-
+          find . -name 'index.xml' -exec cp "{}" ${GITHUB_WORKSPACE}/lol.xml  \;         git add  ${GITHUB_WORKSPACE}/lol.xml
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         if: ${{ github.ref == 'refs/heads/main' }}
