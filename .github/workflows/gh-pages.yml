@@ -31,6 +31,7 @@ jobs:
         run: |
           find . -name 'index.xml' -exec cp "{}" ${GITHUB_WORKSPACE}/lol.xml  \;
           git add  ${GITHUB_WORKSPACE}/lol.xml
+          git commit -m "Add changes" -a
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
