@@ -11,5 +11,5 @@ sidebar_link: true
 ### Tech & Popular Science
 * [**AI w aplikacji, czyli TensorFlow na Androidzie**](https://geek.justjoin.it/ai-aplikacji-czyli-tensorflow-androidzie/), _Just Geek IT_ (PL)
 * [**Notebooki w Data Science. Jupyter czy Apache Zeppelin?**](https://geek.justjoin.it/notebooki-w-data-science-jupyter-czy-apache-zeppelin/), _Just Geek IT_ (PL)
-* [**Sztuczna inteligencja od Google'a wymyśla przepisy na ciasteczka**](https://glodniwiedzy.pl/sztuczna-inteligencja-od-google-a-wymysla-przepisy-na-ciasteczka)
+* [**Sztuczna inteligencja od Google'a wymyśla przepisy na ciasteczka**](https://hive.blog/pl-technologia/@glodniwiedzy/sztuczna-inteligencja-od-google-a-wymysla-przepisy-na-ciasteczka)
 _Głodni Wiedzy_ (PL)
