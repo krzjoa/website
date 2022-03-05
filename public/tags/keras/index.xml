@@ -1,0 +1,1044 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>keras on krzjoa</title>
+    <link>/tags/keras/</link>
+    <description>Recent content in keras on krzjoa</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sat, 05 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="/tags/keras/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Conditional RNN in keras (R) to deal with static features</title>
+      <author>joachimiak.krzysztof@gmail.com (Krzysztof Joachimiak)</author>
+      <link>/2022/03/05/content/post/2022-03-05-conditional-rnn-in-keras-r/</link>
+      <pubDate>Sat, 05 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>/2022/03/05/content/post/2022-03-05-conditional-rnn-in-keras-r/</guid>
+      <description>&lt;p&gt;&lt;a&gt;&lt;img src=&#39;/post/2022-03-05-conditional-rnn-in-keras-r/keras.png&#39; align=&#34;center&#34;/&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;Conditional RNN is one of the possible solutions if we’d like to make
+use of &lt;strong&gt;static features&lt;/strong&gt; in time series forecasting. For example, we
+want to build a model, which can handle multiple time series with many
+different characteristics. It can be a model for demand forecasting for
+multiple products or a unified model forecasting temperature in places
+from different climate zones.&lt;/p&gt;
+&lt;p&gt;We have at least a couple of options to do so. They are described in
+detail in the following &lt;a href=&#34;https://datascience.stackexchange.com/questions/17099/adding-features-to-time-series-model-lstm/17139#17139&#34;&gt;thread on
+StackOverlow&lt;/a&gt;.
+According to the answers, the best way to add static features is to use
+this values to produce an initial hidden state of the recurrent layer.
+The proposed solution was &lt;a href=&#34;https://github.com/philipperemy/cond_rnn&#34;&gt;implemented as a Keras wrapper to recurrent
+layers (in Python)&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;This post is a trial to implement conditional RNN in keras for R.&lt;/p&gt;
+&lt;h2 id=&#34;loading-the-data&#34;&gt;Loading the data&lt;/h2&gt;
+&lt;p&gt;We’ll use a piece of data from an experiment performed by the author of
+the &lt;a href=&#34;https://github.com/philipperemy/cond_rnn/raw/master/examples/temperature/city_temperature.csv.zip&#34;&gt;aforementioned Keras
+wrapper&lt;/a&gt;.
+We’re selecting two cities with extreme temperatures, e.g. &lt;strong&gt;Cairo&lt;/strong&gt;
+and &lt;strong&gt;Helsinki&lt;/strong&gt;.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;library&lt;/span&gt;(data.table, warn.conflicts &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;FALSE&lt;/span&gt;)
+&lt;span style=&#34;color:#a6e22e&#34;&gt;library&lt;/span&gt;(dplyr, warn.conflicts &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;FALSE&lt;/span&gt;)
+&lt;span style=&#34;color:#a6e22e&#34;&gt;library&lt;/span&gt;(lubridate)
+&lt;span style=&#34;color:#a6e22e&#34;&gt;library&lt;/span&gt;(ggplot2)
+&lt;span style=&#34;color:#a6e22e&#34;&gt;library&lt;/span&gt;(imputeTS
+&lt;span style=&#34;color:#a6e22e&#34;&gt;library&lt;/span&gt;(timetk)
+&lt;span style=&#34;color:#a6e22e&#34;&gt;library&lt;/span&gt;(rsample)
+&lt;span style=&#34;color:#a6e22e&#34;&gt;library&lt;/span&gt;(parsnip)
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# url       &amp;lt;- &amp;#34;https://github.com/philipperemy/cond_rnn/raw/master/examples/temperature/city_temperature.csv.zip&amp;#34;&lt;/span&gt;
+file_path &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;city_temperature.csv.zip&amp;#34;&lt;/span&gt;
+csv_path  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;city_temperature.csv&amp;#34;&lt;/span&gt;
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# download.file(url, file_path)&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;# unzip(file_path)&lt;/span&gt;
+
+city_temperature &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;read.csv&lt;/span&gt;(csv_path)
+&lt;span style=&#34;color:#a6e22e&#34;&gt;setDT&lt;/span&gt;(city_temperature)
+
+selected_cities &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  city_temperature[City &lt;span style=&#34;color:#f92672&#34;&gt;%chin%&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Cairo&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Helsinki&amp;#39;&lt;/span&gt;)]
+
+selected_cities[
+  , Date &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ymd&lt;/span&gt;(glue&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;glue&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;{Year}-{Month}-{Day}&amp;#34;&lt;/span&gt;, .envir &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; .SD))
+]
+
+selected_cities &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  selected_cities[, .(City, Date, AvgTemperature)]
+&lt;span style=&#34;color:#a6e22e&#34;&gt;setorder&lt;/span&gt;(selected_cities, City, Date)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;plt &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;ggplot&lt;/span&gt;(selected_cities) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;geom_line&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;aes&lt;/span&gt;(Date, AvgTemperature, col &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; City)) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;theme_minimal&lt;/span&gt;() &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;ggtitle&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Temperature: Cairo vs Helsinki&amp;#34;&lt;/span&gt;)
+
+plt
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img src=&#34;index_files/figure-markdown_strict/selecting.data-1.png&#34; alt=&#34;&#34;&gt;&lt;/p&gt;
+&lt;p&gt;There is a couple of outliers and we can safely assume they simply
+indicate lack of data. We’ll replace it with interpolated values.&lt;/p&gt;
+&lt;p&gt;Initially, I’ve chosen Oslo, but there were a few corrupted year
+numbers:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;city_temperature[City &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Oslo&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; Year &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;200&lt;/span&gt;]
+
+&lt;span style=&#34;color:#75715e&#34;&gt;##     Region Country State City Month Day Year AvgTemperature&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;##  1: Europe  Norway       Oslo    12   1  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;##  2: Europe  Norway       Oslo    12   2  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;##  3: Europe  Norway       Oslo    12   3  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;##  4: Europe  Norway       Oslo    12   4  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;##  5: Europe  Norway       Oslo    12   5  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;##  6: Europe  Norway       Oslo    12   6  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;##  7: Europe  Norway       Oslo    12   7  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;##  8: Europe  Norway       Oslo    12   8  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;##  9: Europe  Norway       Oslo    12   9  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 10: Europe  Norway       Oslo    12  10  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 11: Europe  Norway       Oslo    12  11  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 12: Europe  Norway       Oslo    12  12  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 13: Europe  Norway       Oslo    12  13  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 14: Europe  Norway       Oslo    12  14  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 15: Europe  Norway       Oslo    12  15  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 16: Europe  Norway       Oslo    12  16  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 17: Europe  Norway       Oslo    12  17  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 18: Europe  Norway       Oslo    12  18  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 19: Europe  Norway       Oslo    12  19  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 20: Europe  Norway       Oslo    12  20  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 21: Europe  Norway       Oslo    12  21  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 22: Europe  Norway       Oslo    12  22  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 23: Europe  Norway       Oslo    12  23  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 24: Europe  Norway       Oslo    12  24  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 25: Europe  Norway       Oslo    12  25  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 26: Europe  Norway       Oslo    12  26  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 27: Europe  Norway       Oslo    12  27  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 28: Europe  Norway       Oslo    12  28  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 29: Europe  Norway       Oslo    12  29  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 30: Europe  Norway       Oslo    12  30  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 31: Europe  Norway       Oslo    12  31  200            -99&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;##     Region Country State City Month Day Year AvgTemperature&lt;/span&gt;
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# Cleaning the data&lt;/span&gt;
+selected_cities[AvgTemperature &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;-99.0&lt;/span&gt;, AvgTemperature &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;NA&lt;/span&gt;]
+selected_cities[, AvgTemperature &lt;span style=&#34;color:#f92672&#34;&gt;:=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;na_interpolation&lt;/span&gt;(AvgTemperature)]
+
+plt &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;ggplot&lt;/span&gt;(selected_cities) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;geom_line&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;aes&lt;/span&gt;(Date, AvgTemperature, col &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; City)) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;theme_minimal&lt;/span&gt;() &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;ggtitle&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Temperature: Cairo vs Helsinki&amp;#34;&lt;/span&gt;)
+
+plt
+&lt;span style=&#34;color:#75715e&#34;&gt;# plotly::ggplotly(plt)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img src=&#34;index_files/figure-markdown_strict/removing.outliers-1.png&#34; alt=&#34;&#34;&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;library&lt;/span&gt;(tsibble, warn.conflicts &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;FALSE&lt;/span&gt;, quietly &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;TRUE&lt;/span&gt;)
+
+&lt;span style=&#34;color:#a6e22e&#34;&gt;duplicates&lt;/span&gt;(selected_cities, key &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; City, index &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Date)
+
+&lt;span style=&#34;color:#75715e&#34;&gt;## # A tibble: 4 × 3&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;##   City     Date       AvgTemperature&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;##   &amp;lt;chr&amp;gt;    &amp;lt;date&amp;gt;              &amp;lt;dbl&amp;gt;&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 1 Cairo    2015-12-30           60.5&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 2 Cairo    2015-12-30           57.9&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 3 Helsinki 2015-12-30           26.6&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;## 4 Helsinki 2015-12-30           25.4&lt;/span&gt;
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# Removing dupicates for &lt;/span&gt;
+selected_cities &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  selected_cities[, .(AvgTemperature &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;max&lt;/span&gt;(AvgTemperature)) , by &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; .(City, Date)]
+
+train &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; selected_cities[Date &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;as.Date&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;2019-01-01&amp;#39;&lt;/span&gt;)]
+test  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; selected_cities[
+  Date &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;as.Date&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;2019-01-01&amp;#39;&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; Date &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;as.Date&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;2019-12-31&amp;#39;&lt;/span&gt;)
+]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;baseline-model---one-xgboost-model-for-both-cities&#34;&gt;Baseline model - one xgboost model for both cities&lt;/h2&gt;
+&lt;p&gt;As a baseline model, we’ll train a &lt;code&gt;xgboost&lt;/code&gt; model using &lt;code&gt;parsnip&lt;/code&gt; API
+and &lt;code&gt;modeltime&lt;/code&gt;. We create a &lt;code&gt;data.frame&lt;/code&gt; of lagged variables to feed
+the model. We use &lt;strong&gt;28 lags&lt;/strong&gt; - the same value will be later used as a
+length of input to the &lt;strong&gt;recurrent neural netowrk&lt;/strong&gt; models. We also mix
+the data belonging to different cities, so there are no separate
+models for each city.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;library&lt;/span&gt;(modeltime)
+
+lagged_selected_cities &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  selected_cities &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;group_by&lt;/span&gt;(City) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;tk_augment_lags&lt;/span&gt;(AvgTemperature, .lags &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;28&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;ungroup&lt;/span&gt;()
+
+&lt;span style=&#34;color:#a6e22e&#34;&gt;setDT&lt;/span&gt;(lagged_selected_cities)
+
+train &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; lagged_selected_cities[Date &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;as.Date&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;2019-01-01&amp;#39;&lt;/span&gt;)]
+test  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; lagged_selected_cities[
+  Date &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;as.Date&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;2019-01-01&amp;#39;&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; Date &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;as.Date&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;2019-12-31&amp;#39;&lt;/span&gt;)
+]
+
+lagged_variables &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; glue&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;glue&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;AvgTemperature_lag{1:28}&amp;#34;&lt;/span&gt;)
+formula_rhs      &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;paste0&lt;/span&gt;(lagged_variables, collapse &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34; + &amp;#34;&lt;/span&gt;)
+model_formula    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;as.formula&lt;/span&gt;(
+  glue&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;glue&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;AvgTemperature ~ {formula_rhs}&amp;#34;&lt;/span&gt;)
+)
+
+model_xgboost &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;boost_tree&lt;/span&gt;(mode &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;regression&amp;#34;&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;set_engine&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;xgboost&amp;#34;&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;fit&lt;/span&gt;(model_formula, data &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; train)
+
+fcast &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  model_xgboost &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;predict&lt;/span&gt;(test)
+
+mdltime &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;modeltime_table&lt;/span&gt;(
+    xgboost &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; model_xgboost
+  )
+
+fcast_cairo &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  mdltime &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;modeltime_forecast&lt;/span&gt;(
+    test[City &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Cairo&amp;#39;&lt;/span&gt;], actual_data &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; test[City &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Cairo&amp;#39;&lt;/span&gt;]
+  ) 
+
+fcast_helsinki &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  mdltime &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;modeltime_forecast&lt;/span&gt;(
+    test[City &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Helsinki&amp;#39;&lt;/span&gt;], actual_data &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; test[City &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Helsinki&amp;#39;&lt;/span&gt;]
+  ) 
+
+fcast_cairo &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  fcast_cairo &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;mutate&lt;/span&gt;(name &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Cairo&amp;#39;&lt;/span&gt;)
+
+fcast_helsinki &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  fcast_helsinki &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;mutate&lt;/span&gt;(name &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Helsinki&amp;#39;&lt;/span&gt;)
+
+fcast_xgboost &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;bind_rows&lt;/span&gt;(
+    fcast_cairo, fcast_helsinki
+  ) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;filter&lt;/span&gt;(.key &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;prediction&amp;#39;&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;select&lt;/span&gt;(.index, .value, name) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;rename&lt;/span&gt;(Date &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; .index, value &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; .value) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;mutate&lt;/span&gt;(model &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;xgboost&amp;#39;&lt;/span&gt;)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Let’s take a glance, how the models’ predictions look like.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;fcast_xgboost_cmp &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;bind_rows&lt;/span&gt;(
+    fcast_xgboost,
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;select&lt;/span&gt;(test, Date, name &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; City, value &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; AvgTemperature) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+      &lt;span style=&#34;color:#a6e22e&#34;&gt;mutate&lt;/span&gt;(model &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;actual&amp;#39;&lt;/span&gt;)
+  )
+
+&lt;span style=&#34;color:#a6e22e&#34;&gt;ggplot&lt;/span&gt;(fcast_xgboost_cmp) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;geom_line&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;aes&lt;/span&gt;(Date, value, col &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; model)) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;facet_wrap&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;~&lt;/span&gt;name) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;theme_minimal&lt;/span&gt;()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img src=&#34;index_files/figure-markdown_strict/xgboost.plot-1.png&#34; alt=&#34;&#34;&gt;&lt;/p&gt;
+&lt;p&gt;As we can see, &lt;code&gt;xgboost&lt;/code&gt; models fitted to the data quite well. However,
+the task was relatively simple, because we only wanted to forecast one
+timestep ahead.&lt;/p&gt;
+&lt;h2 id=&#34;preparing-data-for-rnns&#34;&gt;Preparing data for RNNs&lt;/h2&gt;
+&lt;p&gt;We pass to the ‘main course’ - training recurrent neural networks.
+First, we create a couple of auxiliary functions to create input
+tensors:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;3-dimensional tensors&lt;/strong&gt; for input time series&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;matrices&lt;/strong&gt; for outputs and static variables&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;library&lt;/span&gt;(abind)
+
+ndim &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;function&lt;/span&gt;(x){
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;length&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;dim&lt;/span&gt;(x))
+}
+
+shuffle &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;function&lt;/span&gt;(&lt;span style=&#34;color:#66d9ef&#34;&gt;...&lt;/span&gt;){
+
+  objects     &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt;(&lt;span style=&#34;color:#66d9ef&#34;&gt;...&lt;/span&gt;)
+  object_size &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;dim&lt;/span&gt;(objects[[1]])[1]
+  
+  indices &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sample&lt;/span&gt;(object_size,  object_size)
+  
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;Map&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;\&lt;/span&gt;(x) &lt;span style=&#34;color:#a6e22e&#34;&gt;if &lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;ndim&lt;/span&gt;(x) &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;) x[indices, ] else x[indices, ,], objects)
+}
+
+prepare_output &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;function&lt;/span&gt;(fcast, idx){
+
+  idx_cairo    &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; idx &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+  idx_helsinki &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; idx &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;
+    
+  fcast_cairo &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+    fcast[idx_cairo, ] &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;t&lt;/span&gt;() &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;as.vector&lt;/span&gt;()
+  
+  fcast_helsinki &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+    fcast[idx_helsinki, ] &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;t&lt;/span&gt;() &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;as.vector&lt;/span&gt;()
+  
+  fcast_df &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;data.table&lt;/span&gt;(
+      Date &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; test&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;Date[1&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;length&lt;/span&gt;(fcast_cairo)],
+      Cairo &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; fcast_cairo,
+      Helsinki &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; fcast_helsinki
+    ) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+    tidyr&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;pivot_longer&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(Cairo, Helsinki))
+  
+    fcast_df
+}
+
+prepare_data &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;function&lt;/span&gt;(data, timesteps, horizon, jump, 
+                       sample_frac, targets &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;TRUE&lt;/span&gt;, .shuffle &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;TRUE&lt;/span&gt;){
+
+  data_period_length &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;max&lt;/span&gt;(data&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;Date) &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;min&lt;/span&gt;(data&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;Date)
+  data_period_length &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;as.numeric&lt;/span&gt;(data_period_length) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+  
+  n &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; data_period_length &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt; timesteps &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt; horizon &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+  
+  starts &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;seq&lt;/span&gt;(&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, n, jump)
+  starts &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sample&lt;/span&gt;(starts, size &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;length&lt;/span&gt;(starts) &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; sample_frac)
+  starts &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sort&lt;/span&gt;(starts)
+  
+  &lt;span style=&#34;color:#75715e&#34;&gt;# Cairo&lt;/span&gt;
+  data_cairo &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+    data[City &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Cairo&amp;#39;&lt;/span&gt;, .(AvgTemperature)]
+  
+  x_data_cairo &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+    purrr&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;map&lt;/span&gt;(
+      starts, 
+      &lt;span style=&#34;color:#a6e22e&#34;&gt;\&lt;/span&gt;(i) &lt;span style=&#34;color:#a6e22e&#34;&gt;array&lt;/span&gt;(data_cairo[i&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;i&lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;timesteps&lt;span style=&#34;color:#ae81ff&#34;&gt;-1&lt;/span&gt;, ]&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;AvgTemperature, &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, timesteps, &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;))
+    )
+  
+  x_data_cairo        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;abind&lt;/span&gt;(x_data_cairo, along &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;)
+  x_data_static_cairo &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;matrix&lt;/span&gt;(&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;dim&lt;/span&gt;(x_data_cairo)[1], &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;) 
+  
+  y_data_cairo &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+      purrr&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;map&lt;/span&gt;(
+        starts, 
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;\&lt;/span&gt;(i) &lt;span style=&#34;color:#a6e22e&#34;&gt;array&lt;/span&gt;(data_cairo&lt;span style=&#34;color:#a6e22e&#34;&gt;[&lt;/span&gt;(i&lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;timesteps)&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;(i&lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;timesteps&lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;horizon&lt;span style=&#34;color:#ae81ff&#34;&gt;-1&lt;/span&gt;), ]&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;AvgTemperature, &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, horizon))
+      )
+  y_data_cairo &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;abind&lt;/span&gt;(y_data_cairo, along &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;)
+  
+  &lt;span style=&#34;color:#75715e&#34;&gt;# Helsinki&lt;/span&gt;
+  data_helsinki &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+    data[City &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Helsinki&amp;#39;&lt;/span&gt;, .(AvgTemperature)]
+  
+  x_data_helsinki &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+    purrr&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;map&lt;/span&gt;(
+      starts, 
+      &lt;span style=&#34;color:#a6e22e&#34;&gt;\&lt;/span&gt;(i) &lt;span style=&#34;color:#a6e22e&#34;&gt;array&lt;/span&gt;(data_helsinki[i&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;i&lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;timesteps&lt;span style=&#34;color:#ae81ff&#34;&gt;-1&lt;/span&gt;, ]&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;AvgTemperature, &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, timesteps, &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;))
+    )
+  
+  x_data_helsinki        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;abind&lt;/span&gt;(x_data_helsinki, along &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;)
+  x_data_static_helsinki &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;matrix&lt;/span&gt;(&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#a6e22e&#34;&gt;dim&lt;/span&gt;(x_data_helsinki)[1], &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;) 
+  
+  &lt;span style=&#34;color:#75715e&#34;&gt;# Complete data&lt;/span&gt;
+  x_data        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;abind&lt;/span&gt;(x_data_cairo, x_data_helsinki, along &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;)
+  x_static_data &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;abind&lt;/span&gt;(x_data_static_cairo, x_data_static_helsinki, along &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;) 
+  
+  right_order &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;if &lt;/span&gt;(targets) {
+      y_data_helsinki &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+      purrr&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;map&lt;/span&gt;(
+        starts, 
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;\&lt;/span&gt;(i) &lt;span style=&#34;color:#a6e22e&#34;&gt;array&lt;/span&gt;(data_helsinki&lt;span style=&#34;color:#a6e22e&#34;&gt;[&lt;/span&gt;(i&lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;timesteps)&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;(i&lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;timesteps&lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;horizon&lt;span style=&#34;color:#ae81ff&#34;&gt;-1&lt;/span&gt;), ]&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;AvgTemperature, &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, horizon))
+      )
+      
+      y_data_helsinki &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;abind&lt;/span&gt;(y_data_helsinki, along &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;)
+      y               &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;abind&lt;/span&gt;(y_data_cairo, y_data_helsinki, along &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;)
+      
+      &lt;span style=&#34;color:#a6e22e&#34;&gt;if &lt;/span&gt;(.shuffle)
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;return&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;shuffle&lt;/span&gt;(x_data, x_static_data, y))
+      else
+        &lt;span style=&#34;color:#a6e22e&#34;&gt;return&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt;(x_data, x_static_data, y))
+  } else {
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;if &lt;/span&gt;(.shuffle)
+      &lt;span style=&#34;color:#a6e22e&#34;&gt;return&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;shuffle&lt;/span&gt;(x_data, x_static_data))
+    else 
+      &lt;span style=&#34;color:#a6e22e&#34;&gt;return&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt;(x_data, x_static_data))
+  }
+
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Experiment configuration:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;TIMESTEPS        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;28&lt;/span&gt;
+HORIZON_1        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+HORIZON_7        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;7&lt;/span&gt;
+
+DYNAMIC_FEATURES &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+STATIC_FEATURES  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+RNN_UNITS        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;32&lt;/span&gt;
+VOCABULARY_SIZE  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt; &lt;span style=&#34;color:#75715e&#34;&gt;# because we have two cities&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Importing &lt;code&gt;keras&lt;/code&gt;, we’re also loading multiple assignment operator from
+&lt;code&gt;zeallot&lt;/code&gt;, namely &lt;code&gt;%&amp;lt;-%&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;library&lt;/span&gt;(keras)
+
+JUMP        &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;
+SAMPLE_FRAC &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0.5&lt;/span&gt;
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# HORIZON = 1&lt;/span&gt;
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# Training data&lt;/span&gt;
+&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(x_train_h1, x_static_train_h1, y_h1) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;lt;-%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;prepare_data&lt;/span&gt;(
+    data        &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; train,
+    timesteps   &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; TIMESTEPS,
+    horizon     &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; HORIZON_1,
+    jump        &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; HORIZON_1,
+    sample_frac &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; SAMPLE_FRAC
+  )
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# Test data&lt;/span&gt;
+&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(x_test_h1, x_static_test_h1) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;lt;-%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;prepare_data&lt;/span&gt;(
+    data        &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; test,
+    timesteps   &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; TIMESTEPS,
+    horizon     &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; HORIZON_1,
+    jump        &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; HORIZON_1,
+    sample_frac &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;,
+    targets     &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;FALSE&lt;/span&gt;,
+    .shuffle    &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;FALSE&lt;/span&gt; 
+  )
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# HORIZON = 7&lt;/span&gt;
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# Training data&lt;/span&gt;
+&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(x_train_h7, x_static_train_h7, y_h7) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;lt;-%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;prepare_data&lt;/span&gt;(
+    data        &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; train,
+    timesteps   &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; TIMESTEPS,
+    horizon     &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; HORIZON_7,
+    jump        &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;,
+    sample_frac &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; SAMPLE_FRAC
+  )
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# Test data&lt;/span&gt;
+&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(x_test_h7, x_static_test_h7) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;lt;-%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;prepare_data&lt;/span&gt;(
+    data        &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; test,
+    timesteps   &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; TIMESTEPS,
+    horizon     &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; HORIZON_7,
+    jump        &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; HORIZON_7,
+    sample_frac &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;,
+    targets     &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;FALSE&lt;/span&gt;,
+    .shuffle    &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;FALSE&lt;/span&gt; 
+  )
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;conditional-rnn&#34;&gt;Conditional RNN&lt;/h2&gt;
+&lt;p&gt;The idea of &lt;strong&gt;conditional RNN&lt;/strong&gt; is to initialize hidden states of the
+recurrent layer using specially prepared values, which indicate a
+specific type of the time series.&lt;/p&gt;
+&lt;p&gt;I let myself for some simplifications in these experiments, e.g.:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;data is not scaled&lt;/li&gt;
+&lt;li&gt;validation data is not used to prevent overfitting&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;experiment_conditional_rnn &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;function&lt;/span&gt;(timesteps, horizon, rnn_units, 
+            vocabulary_size, dynamic_features, static_features,
+            model, x_train, x_static_train, y, x_test, x_static_test){
+
+  &lt;span style=&#34;color:#75715e&#34;&gt;# Model&lt;/span&gt;
+  ts_input     &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;layer_input&lt;/span&gt;(shape &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(timesteps, dynamic_features))
+  static_input &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;layer_input&lt;/span&gt;(shape &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; static_features)
+  
+  embedding &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;layer_embedding&lt;/span&gt;(input_dim &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; vocabulary_size, 
+                               output_dim &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; rnn_units)(static_input)
+  embedding &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;layer_lambda&lt;/span&gt;(f &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;\&lt;/span&gt;(x) x[,&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;,])(embedding)
+  
+  rnn_layer &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;layer_gru&lt;/span&gt;(units &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; rnn_units, name &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;rnn&amp;#39;&lt;/span&gt;)(ts_input, initial_state &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; embedding)
+  
+  &lt;span style=&#34;color:#75715e&#34;&gt;# For LSTM layers we have to provide two hidden state values&lt;/span&gt;
+  &lt;span style=&#34;color:#75715e&#34;&gt;# rnn_layer &amp;lt;- &lt;/span&gt;
+  &lt;span style=&#34;color:#75715e&#34;&gt;#  layer_gru(units = rnn_units, name = &amp;#39;rnn&amp;#39;)(ts_input, initial_state = list(embedding, embedding))&lt;/span&gt;
+  
+  final_layer &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;layer_dense&lt;/span&gt;(units &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; horizon, activation &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;linear&amp;#39;&lt;/span&gt;)(rnn_layer)
+  
+  &lt;span style=&#34;color:#75715e&#34;&gt;# Compiling&lt;/span&gt;
+  net &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;keras_model&lt;/span&gt;(
+      inputs  &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt;(ts_input, static_input),
+      outputs &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt;(final_layer) 
+    ) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt;
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;compile&lt;/span&gt;(
+      optimizer &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;adam&amp;#39;&lt;/span&gt;,
+      loss      &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;mae&amp;#39;&lt;/span&gt;
+    )
+  
+  &lt;span style=&#34;color:#75715e&#34;&gt;# Training&lt;/span&gt;
+  net &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;fit&lt;/span&gt;(
+      x &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt;(x_train, x_static_train),
+      y &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt;(y),
+      epochs &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;50&lt;/span&gt;,
+      batch_size &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;32&lt;/span&gt;
+    )
+
+  &lt;span style=&#34;color:#75715e&#34;&gt;# Forecasting&lt;/span&gt;
+  fcast &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+    net &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;predict&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt;(x_test, x_static_test))
+  
+
+  fcast_df &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;prepare_output&lt;/span&gt;(fcast, x_static_test)
+  fcast_df&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;model &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; model
+
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt;(net, fcast_df)
+}
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# HORIZON = 1&lt;/span&gt;
+&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(net_cond_h1, fcast_cond_h1) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;lt;-%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;experiment_conditional_rnn&lt;/span&gt;(
+    &lt;span style=&#34;color:#75715e&#34;&gt;# Network&lt;/span&gt;
+    timesteps        &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; TIMESTEPS,
+    vocabulary_size  &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; VOCABULARY_SIZE,
+    dynamic_features &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; DYNAMIC_FEATURES,
+    static_features  &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; STATIC_FEATURES,
+    horizon          &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; HORIZON_1,
+    rnn_units        &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; RNN_UNITS,
+    model            &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;cond_rnn_h1&amp;#39;&lt;/span&gt;,
+    &lt;span style=&#34;color:#75715e&#34;&gt;# Data&lt;/span&gt;
+    x_train          &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; x_train_h1,
+    x_static_train   &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; x_static_train_h1,
+    y                &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; y_h1,
+    x_test           &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; x_test_h1,
+    x_static_test    &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; x_static_test_h1
+  )
+
+&lt;span style=&#34;color:#75715e&#34;&gt;## Loaded Tensorflow version 2.8.0&lt;/span&gt;
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# HORIZON = 7&lt;/span&gt;
+&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(net_cond_h7, fcast_cond_h7) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;lt;-%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;experiment_conditional_rnn&lt;/span&gt;(
+    &lt;span style=&#34;color:#75715e&#34;&gt;# Network&lt;/span&gt;
+    timesteps        &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; TIMESTEPS,
+    vocabulary_size  &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; VOCABULARY_SIZE,
+    dynamic_features &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; DYNAMIC_FEATURES,
+    static_features  &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; STATIC_FEATURES,
+    horizon          &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; HORIZON_7,
+    rnn_units        &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; RNN_UNITS,
+    model            &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;cond_rnn_h7&amp;#39;&lt;/span&gt;,
+    &lt;span style=&#34;color:#75715e&#34;&gt;# Data&lt;/span&gt;
+    x_train          &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; x_train_h7,
+    x_static_train   &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; x_static_train_h7,
+    y                &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; y_h7,
+    x_test           &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; x_test_h7,
+    x_static_test    &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; x_static_test_h7
+  )
+
+fcast_cond_cmp &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;bind_rows&lt;/span&gt;(
+    fcast_cond_h1,
+    fcast_cond_h7,
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;select&lt;/span&gt;(test, Date, name &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; City, value &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; AvgTemperature) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+      &lt;span style=&#34;color:#a6e22e&#34;&gt;mutate&lt;/span&gt;(model &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;actual&amp;#39;&lt;/span&gt;)
+  )
+
+&lt;span style=&#34;color:#a6e22e&#34;&gt;ggplot&lt;/span&gt;(fcast_cond_cmp) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;geom_line&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;aes&lt;/span&gt;(Date, value, col &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; model)) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;facet_wrap&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;~&lt;/span&gt;name) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;theme_minimal&lt;/span&gt;()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img src=&#34;index_files/figure-markdown_strict/cond.plot-1.png&#34; alt=&#34;&#34;&gt;&lt;/p&gt;
+&lt;h2 id=&#34;simple-rnn&#34;&gt;Simple RNN&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;experiment_simple_rnn &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;function&lt;/span&gt;(timesteps, horizon, rnn_units,
+           model, x_train, y, x_test, x_static_test){
+  
+  &lt;span style=&#34;color:#75715e&#34;&gt;# Network architecture&lt;/span&gt;
+  ts_input  &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;layer_input&lt;/span&gt;(shape &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(timesteps, &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;))
+  rnn_layer &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;layer_gru&lt;/span&gt;(units &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; rnn_units, name &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;rnn&amp;#39;&lt;/span&gt;)(ts_input)
+  
+  final_layer &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;layer_dense&lt;/span&gt;(units &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; horizon, activation &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;linear&amp;#39;&lt;/span&gt;)(rnn_layer)
+  
+  &lt;span style=&#34;color:#75715e&#34;&gt;# Compiling&lt;/span&gt;
+  net &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;keras_model&lt;/span&gt;(
+      inputs  &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt;(ts_input),
+      outputs &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt;(final_layer) 
+    ) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt;
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;compile&lt;/span&gt;(
+      optimizer &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;adam&amp;#39;&lt;/span&gt;,
+      loss      &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;mae&amp;#39;&lt;/span&gt;
+    )
+  
+  &lt;span style=&#34;color:#75715e&#34;&gt;# Training &lt;/span&gt;
+  net &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;fit&lt;/span&gt;(
+      x &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt;(x_train),
+      y &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt;(y),
+      epochs &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;50&lt;/span&gt;,
+      batch_size &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;32&lt;/span&gt;
+    )
+  
+  &lt;span style=&#34;color:#75715e&#34;&gt;# Forecasting&lt;/span&gt;
+  fcast &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+    net &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;predict&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt;(x_test))
+  
+  fcast_df &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;prepare_output&lt;/span&gt;(fcast, x_static_test)
+  fcast_df&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;model &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; model
+
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt;(net, fcast_df)     
+}
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# HORIZON = 1&lt;/span&gt;
+&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(net_simple_h1, fcast_simple_h1) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;lt;-%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;experiment_simple_rnn&lt;/span&gt;(
+    &lt;span style=&#34;color:#75715e&#34;&gt;# Network&lt;/span&gt;
+    timesteps     &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; TIMESTEPS,
+    horizon       &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; HORIZON_1,
+    rnn_units     &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;32&lt;/span&gt;,
+    model         &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;simple_rnn_h1&amp;#39;&lt;/span&gt;,
+    &lt;span style=&#34;color:#75715e&#34;&gt;# Data&lt;/span&gt;
+    x_train       &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; x_train_h1,
+    y             &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; y_h1,
+    x_test        &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; x_test_h1,
+    x_static_test &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; x_static_test_h1
+  )
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# HORIZON = 7&lt;/span&gt;
+&lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(net_simple_h7, fcast_simple_h7) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;lt;-%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;experiment_simple_rnn&lt;/span&gt;(
+    &lt;span style=&#34;color:#75715e&#34;&gt;# Network&lt;/span&gt;
+    timesteps     &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; TIMESTEPS,
+    horizon       &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; HORIZON_7,
+    rnn_units     &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;32&lt;/span&gt;,
+    model         &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;simple_rnn_h7&amp;#39;&lt;/span&gt;,
+    &lt;span style=&#34;color:#75715e&#34;&gt;# Data&lt;/span&gt;
+    x_train       &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; x_train_h7,
+    y             &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; y_h7,
+    x_test        &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; x_test_h7,
+    x_static_test &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; x_static_test_h7
+  )
+
+fcast_simple_cmp &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;bind_rows&lt;/span&gt;(
+    fcast_simple_h1,
+    fcast_simple_h7,
+    &lt;span style=&#34;color:#a6e22e&#34;&gt;select&lt;/span&gt;(test, Date, name &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; City, value &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; AvgTemperature) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+      &lt;span style=&#34;color:#a6e22e&#34;&gt;mutate&lt;/span&gt;(model &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;actual&amp;#39;&lt;/span&gt;)
+  )
+
+&lt;span style=&#34;color:#a6e22e&#34;&gt;ggplot&lt;/span&gt;(fcast_simple_cmp) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;geom_line&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;aes&lt;/span&gt;(Date, value, col &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; model)) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;facet_wrap&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;~&lt;/span&gt;name) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;theme_minimal&lt;/span&gt;()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img src=&#34;index_files/figure-markdown_strict/simple.plot-1.png&#34; alt=&#34;&#34;&gt;&lt;/p&gt;
+&lt;h2 id=&#34;summary&#34;&gt;Summary&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;library&lt;/span&gt;(yardstick)
+
+fcast_df &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;bind_rows&lt;/span&gt;(
+    fcast_xgboost,
+    fcast_cond_h1,
+    fcast_cond_h7,
+    fcast_simple_h1,
+    fcast_simple_h7
+  )
+
+fcast_df &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  fcast_df &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;left_join&lt;/span&gt;(test &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;select&lt;/span&gt;(Date, City, AvgTemperature), 
+            by &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;c&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Date&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;name&amp;#39;&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;City&amp;#39;&lt;/span&gt;))
+
+fcast_df &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;group_by&lt;/span&gt;(model) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;summarise&lt;/span&gt;(mape &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;mape_vec&lt;/span&gt;(AvgTemperature, value)) &lt;span style=&#34;color:#f92672&#34;&gt;%&amp;gt;%&lt;/span&gt; 
+  gt&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;gt&lt;/span&gt;()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div id=&#34;zpafsdmqom&#34; style=&#34;overflow-x:auto;overflow-y:auto;width:auto;height:auto;&#34;&gt;
+&lt;style&gt;html {
+  font-family: -apple-system, BlinkMacSystemFont, &#39;Segoe UI&#39;, Roboto, Oxygen, Ubuntu, Cantarell, &#39;Helvetica Neue&#39;, &#39;Fira Sans&#39;, &#39;Droid Sans&#39;, Arial, sans-serif;
+}
+&lt;p&gt;#zpafsdmqom .gt_table {
+display: table;
+border-collapse: collapse;
+margin-left: auto;
+margin-right: auto;
+color: #333333;
+font-size: 16px;
+font-weight: normal;
+font-style: normal;
+background-color: #FFFFFF;
+width: auto;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #A8A8A8;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #A8A8A8;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_heading {
+background-color: #FFFFFF;
+text-align: center;
+border-bottom-color: #FFFFFF;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_title {
+color: #333333;
+font-size: 125%;
+font-weight: initial;
+padding-top: 4px;
+padding-bottom: 4px;
+padding-left: 5px;
+padding-right: 5px;
+border-bottom-color: #FFFFFF;
+border-bottom-width: 0;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_subtitle {
+color: #333333;
+font-size: 85%;
+font-weight: initial;
+padding-top: 0;
+padding-bottom: 6px;
+padding-left: 5px;
+padding-right: 5px;
+border-top-color: #FFFFFF;
+border-top-width: 0;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_bottom_border {
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_col_headings {
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_col_heading {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: normal;
+text-transform: inherit;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: bottom;
+padding-top: 5px;
+padding-bottom: 6px;
+padding-left: 5px;
+padding-right: 5px;
+overflow-x: hidden;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_column_spanner_outer {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: normal;
+text-transform: inherit;
+padding-top: 0;
+padding-bottom: 0;
+padding-left: 4px;
+padding-right: 4px;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_column_spanner_outer:first-child {
+padding-left: 0;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_column_spanner_outer:last-child {
+padding-right: 0;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_column_spanner {
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+vertical-align: bottom;
+padding-top: 5px;
+padding-bottom: 5px;
+overflow-x: hidden;
+display: inline-block;
+width: 100%;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_group_heading {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: middle;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_empty_group_heading {
+padding: 0.5px;
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+vertical-align: middle;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_from_md &amp;gt; :first-child {
+margin-top: 0;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_from_md &amp;gt; :last-child {
+margin-bottom: 0;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+margin: 10px;
+border-top-style: solid;
+border-top-width: 1px;
+border-top-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 1px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 1px;
+border-right-color: #D3D3D3;
+vertical-align: middle;
+overflow-x: hidden;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_stub {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-right-style: solid;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+padding-left: 5px;
+padding-right: 5px;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_stub_row_group {
+color: #333333;
+background-color: #FFFFFF;
+font-size: 100%;
+font-weight: initial;
+text-transform: inherit;
+border-right-style: solid;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+padding-left: 5px;
+padding-right: 5px;
+vertical-align: top;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_row_group_first td {
+border-top-width: 2px;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_summary_row {
+color: #333333;
+background-color: #FFFFFF;
+text-transform: inherit;
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_first_summary_row {
+border-top-style: solid;
+border-top-color: #D3D3D3;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_first_summary_row.thick {
+border-top-width: 2px;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_last_summary_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_grand_summary_row {
+color: #333333;
+background-color: #FFFFFF;
+text-transform: inherit;
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_first_grand_summary_row {
+padding-top: 8px;
+padding-bottom: 8px;
+padding-left: 5px;
+padding-right: 5px;
+border-top-style: double;
+border-top-width: 6px;
+border-top-color: #D3D3D3;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_striped {
+background-color: rgba(128, 128, 128, 0.05);
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_table_body {
+border-top-style: solid;
+border-top-width: 2px;
+border-top-color: #D3D3D3;
+border-bottom-style: solid;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_footnotes {
+color: #333333;
+background-color: #FFFFFF;
+border-bottom-style: none;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_footnote {
+margin: 0px;
+font-size: 90%;
+padding-left: 4px;
+padding-right: 4px;
+padding-left: 5px;
+padding-right: 5px;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_sourcenotes {
+color: #333333;
+background-color: #FFFFFF;
+border-bottom-style: none;
+border-bottom-width: 2px;
+border-bottom-color: #D3D3D3;
+border-left-style: none;
+border-left-width: 2px;
+border-left-color: #D3D3D3;
+border-right-style: none;
+border-right-width: 2px;
+border-right-color: #D3D3D3;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_sourcenote {
+font-size: 90%;
+padding-top: 4px;
+padding-bottom: 4px;
+padding-left: 5px;
+padding-right: 5px;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_left {
+text-align: left;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_center {
+text-align: center;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_right {
+text-align: right;
+font-variant-numeric: tabular-nums;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_font_normal {
+font-weight: normal;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_font_bold {
+font-weight: bold;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_font_italic {
+font-style: italic;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_super {
+font-size: 65%;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_footnote_marks {
+font-style: italic;
+font-weight: normal;
+font-size: 75%;
+vertical-align: 0.4em;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_asterisk {
+font-size: 100%;
+vertical-align: 0;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_slash_mark {
+font-size: 0.7em;
+line-height: 0.7em;
+vertical-align: 0.15em;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_fraction_numerator {
+font-size: 0.6em;
+line-height: 0.6em;
+vertical-align: 0.45em;
+}&lt;/p&gt;
+&lt;p&gt;#zpafsdmqom .gt_fraction_denominator {
+font-size: 0.6em;
+line-height: 0.6em;
+vertical-align: -0.05em;
+}
+&lt;/style&gt;&lt;/p&gt;
+&lt;table class=&#34;gt_table&#34;&gt;
+  &lt;thead class=&#34;gt_col_headings&#34;&gt;
+    &lt;tr&gt;
+      &lt;th class=&#34;gt_col_heading gt_columns_bottom_border gt_left&#34; rowspan=&#34;1&#34; colspan=&#34;1&#34;&gt;model&lt;/th&gt;
+      &lt;th class=&#34;gt_col_heading gt_columns_bottom_border gt_right&#34; rowspan=&#34;1&#34; colspan=&#34;1&#34;&gt;mape&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody class=&#34;gt_table_body&#34;&gt;
+    &lt;tr&gt;&lt;td class=&#34;gt_row gt_left&#34;&gt;cond_rnn_h1&lt;/td&gt;
+&lt;td class=&#34;gt_row gt_right&#34;&gt;34.32918&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td class=&#34;gt_row gt_left&#34;&gt;cond_rnn_h7&lt;/td&gt;
+&lt;td class=&#34;gt_row gt_right&#34;&gt;31.92488&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td class=&#34;gt_row gt_left&#34;&gt;simple_rnn_h1&lt;/td&gt;
+&lt;td class=&#34;gt_row gt_right&#34;&gt;34.44923&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td class=&#34;gt_row gt_left&#34;&gt;simple_rnn_h7&lt;/td&gt;
+&lt;td class=&#34;gt_row gt_right&#34;&gt;32.86985&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td class=&#34;gt_row gt_left&#34;&gt;xgboost&lt;/td&gt;
+&lt;td class=&#34;gt_row gt_right&#34;&gt;14.82363&lt;/td&gt;&lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/div&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;plt &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;ggplot&lt;/span&gt;(fcast_df) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;geom_line&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;aes&lt;/span&gt;(Date, value, col &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; model)) &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; 
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;theme_minimal&lt;/span&gt;() &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt;
+  &lt;span style=&#34;color:#a6e22e&#34;&gt;facet_wrap&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;~&lt;/span&gt;name)
+
+plt
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img src=&#34;index_files/figure-markdown_strict/experiments-1.png&#34; alt=&#34;&#34;&gt;&lt;/p&gt;
+&lt;h2 id=&#34;conclusions&#34;&gt;Conclusions&lt;/h2&gt;
+&lt;p&gt;As we can see, there is technically no difference in terms of MAPE, when
+we are comparing results of &lt;strong&gt;simple_rnn_h1&lt;/strong&gt; and &lt;strong&gt;cond_rnn_h1&lt;/strong&gt;.
+When it comes to the RNN models with 7-day horizon, the diffrences are
+also negligible.&lt;/p&gt;
+&lt;p&gt;Our baseline model beats both simple and conditional RNN models. However, bear
+in mind that 1-timestep horizon is not a most realistic use case in most
+problems.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

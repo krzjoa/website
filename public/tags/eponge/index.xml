@@ -9,22 +9,156 @@
     <lastBuildDate>Sun, 27 Sep 2020 00:00:00 +0000</lastBuildDate><atom:link href="/tags/eponge/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>path.chain: Concise Structure for Chainable Paths</title>
+      <author>joachimiak.krzysztof@gmail.com (Krzysztof Joachimiak)</author>
       <link>/2020/09/27/content/post/2020-09-27-path-chain/2020-09-27-path-chain/</link>
       <pubDate>Sun, 27 Sep 2020 00:00:00 +0000</pubDate>
       
       <guid>/2020/09/27/content/post/2020-09-27-path-chain/2020-09-27-path-chain/</guid>
-      <description>path.chain package provides an intuitive and easy-to-use system of nested objects, which represents different levels of some directory’s structure in the file system. It allows us to
-Look at the path.chain Sometimes one picture can say more, than a thousand words, and this is exactly the case.
-  Motivation ---------- I’ve been working on the ML project, when we decided to keep strcture of the input data in the YAML config.</description>
+      <description>&lt;p&gt;&lt;a href=&#34;https://krzjoa.github.io/path.chain&#34;&gt;&lt;img src=&#39;https://raw.githubusercontent.com/krzjoa/path.chain/master/man/figures/logo.png&#39; align=&#34;left&#34; height=&#34;139&#34; style=&#34;margin-right: 20px&#34; /&gt;&lt;/a&gt;
+&lt;code&gt;path.chain&lt;/code&gt; package provides an intuitive and easy-to-use system of
+nested objects, which represents different levels of some directory’s
+structure in the file system. It allows us to created a nested structure, which returns a string
+from every its leaf.&lt;/p&gt;
+&lt;br/&gt;
+&lt;h2 id=&#34;look-at-the-pathchain&#34;&gt;Look at the &lt;code&gt;path.chain&lt;/code&gt;&lt;/h2&gt;
+&lt;p&gt;Sometimes one picture can say more, than a thousand words, and this is
+exactly the case.&lt;/p&gt;
+&lt;center&gt;
+&lt;img src=&#39;https://raw.githubusercontent.com/krzjoa/path.chain/master/man/figures/path_chain.gif&#39;/&gt;
+&lt;/center&gt;
+&lt;h2 id=&#34;motivation&#34;&gt;Motivation&lt;/h2&gt;
+&lt;p&gt;I’ve been working on the ML project, when we decided to keep strcture of
+the input data in the &lt;strong&gt;YAML&lt;/strong&gt; config. The structure were getting
+complicated, and at some point on this history ou config get a form like
+this:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;default&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;kData&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;kRoot&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;our/super/dir&amp;#39;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;kTerroir&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;kRoot&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;terroir&amp;#39;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;kSoils&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;soils.fst&amp;#39;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;kTemperature&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;temperature.fst&amp;#39;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;kRains&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;rains.fst&amp;#39;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;kWineQuality&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;kChemicalParams&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;chemical_params.fst&amp;#39;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;kContestResults&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;contest_results.fst&amp;#39;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;For your infomation: the example above is totally fictitious and has
+nothing to do with the actual project I’ve been woking on. Moreover, in
+our project, several times more of paths were defined. As you can
+imagine, such structure forced us to load data in the following manner:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;config &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; config&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;get&lt;/span&gt;(
+  config &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;default&amp;#34;&lt;/span&gt;
+  file &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;path/to/config&amp;#34;&lt;/span&gt;,
+  use_parent &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;FALSE&lt;/span&gt;  
+)
+
+path &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;file.path&lt;/span&gt;(
+  config&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;kData&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;kRoot,
+  config&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;kData&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;kTerroir&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;kRoot,
+  config&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;kData&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;kTerroir&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;kSoils
+)
+
+vineyard_soils &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; fst&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;read_fst&lt;/span&gt;(path)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Doesn’t it look redundant? So, I’ve written a &lt;code&gt;path.chain&lt;/code&gt; package:
+using it we can perform the same action with less code:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;library&lt;/span&gt;(path.chain)
+
+vineyard_soils &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; fst&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;read_fst&lt;/span&gt;(
+  config&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;kData&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;kTerroir&lt;span style=&#34;color:#f92672&#34;&gt;$&lt;/span&gt;kSoils
+)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Isn’t it nice for your eyes?&lt;/p&gt;
+&lt;p&gt;If I would like to modify the config, say, with the following change,&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-yaml&#34; data-lang=&#34;yaml&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;default&lt;/span&gt;:
+  &lt;span style=&#34;color:#f92672&#34;&gt;kData&lt;/span&gt;:
+    &lt;span style=&#34;color:#f92672&#34;&gt;kRoot&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;our/super/dir&amp;#39;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;kTerroir&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;kRoot&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;terroir&amp;#39;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;kSoils&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;vineyard_soils.fst&amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#75715e&#34;&gt;# &amp;lt;- This is the change&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;kTemperature&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;temperature.fst&amp;#39;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;kRains&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;rains.fst&amp;#39;&lt;/span&gt;
+    &lt;span style=&#34;color:#f92672&#34;&gt;kWineQuality&lt;/span&gt;:
+      &lt;span style=&#34;color:#f92672&#34;&gt;kChemicalParams&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;chemical_params.fst&amp;#39;&lt;/span&gt;
+      &lt;span style=&#34;color:#f92672&#34;&gt;kContestResults&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;contest_results.fst&amp;#39;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;the code is still working.&lt;/p&gt;
+&lt;p&gt;What if we would like to reconfigure our list of paths wthout changing
+the code? It may probably break desired behaviour of our scripts, but
+with &lt;code&gt;path.chain&lt;/code&gt; we can easily detect the cause looking into logs.
+Simply use &lt;code&gt;on_path_not_exists&lt;/code&gt; or &lt;code&gt;on_validate_path&lt;/code&gt;&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;on_validate_path&lt;/span&gt;(
+  &lt;span style=&#34;color:#f92672&#34;&gt;~&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;if&lt;/span&gt;(tools&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;file_ext&lt;/span&gt;(.x) &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.fst&amp;#39;&lt;/span&gt;) &lt;span style=&#34;color:#a6e22e&#34;&gt;print&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Invalid file&amp;#34;&lt;/span&gt;)
+)
+
+&lt;span style=&#34;color:#a6e22e&#34;&gt;on_path_not_exists&lt;/span&gt;(&lt;span style=&#34;color:#f92672&#34;&gt;~&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;log_error&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Path {.x} not exists&amp;#34;&lt;/span&gt;))
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;To learn more, read the &lt;a href=&#34;https://krzjoa.github.io/path.chain/index.html&#34;&gt;package
+documentation&lt;/a&gt;.&lt;/p&gt;
+</description>
     </item>
     
     <item>
       <title>eponge: Keep Your Environment Clean</title>
+      <author>joachimiak.krzysztof@gmail.com (Krzysztof Joachimiak)</author>
       <link>/2020/05/10/content/post/2020-05-10-eponge/2020-05-10-eponge/</link>
       <pubDate>Sun, 10 May 2020 00:00:00 +0000</pubDate>
       
       <guid>/2020/05/10/content/post/2020-05-10-eponge/2020-05-10-eponge/</guid>
-      <description>eponge is a small package, which facilitates selective object removal. It was released on CRAN at 23th March 2020. Initially, the package was named sponge, but during first submission trial I found out, that currently there exists the SPONGE package, availbale on BioConductor. Because of that, I decided to rename my package, changing only one letter. The package was given a new name: eponge, which simply means sponge in French.</description>
+      <description>&lt;p&gt;&lt;a href=&#34;https://krzjoa.github.io/matricks&#34;&gt;&lt;img src=&#39;https://raw.githubusercontent.com/krzjoa/eponge/master/man/figures/logo.png&#39; align=&#34;left&#34; height=&#34;139&#34; style=&#34;margin-right: 20px&#34; /&gt;&lt;/a&gt;
+&lt;code&gt;eponge&lt;/code&gt; is a small package, which facilitates selective object removal.
+It was released on
+&lt;a href=&#34;https://cran.r-project.org/web/packages/eponge/index.html&#34;&gt;CRAN&lt;/a&gt; at
+23th March 2020. Initially, the package was named &lt;code&gt;sponge&lt;/code&gt;, but during
+first submission trial I found out, that currently there exists the
+&lt;a href=&#34;https://www.bioconductor.org/packages/release/bioc/html/SPONGE.html&#34;&gt;SPONGE&lt;/a&gt;
+package, availbale on BioConductor. Because of that, I decided to rename
+my package, changing only one letter. The package was given a new name:
+&lt;code&gt;eponge&lt;/code&gt;, which simply means &lt;em&gt;sponge&lt;/em&gt; in
+&lt;a href=&#34;https://en.wiktionary.org/wiki/%C3%A9ponge&#34;&gt;French&lt;/a&gt;. Let me present,
+what the package was created for.&lt;/p&gt;
+&lt;h2 id=&#34;removing-objects-by-name&#34;&gt;Removing objects by name&lt;/h2&gt;
+&lt;p&gt;Typically, when we want to remove all objects from the &lt;strong&gt;global
+environment&lt;/strong&gt;, we can use click the broom icon in RStudio (supposing we
+use this IDE - but in most cases, we do). Alternatively, we can obtain
+the same results combining &lt;code&gt;rm&lt;/code&gt; with &lt;code&gt;ls&lt;/code&gt;.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# Remove all the objects&lt;/span&gt;
+&lt;span style=&#34;color:#a6e22e&#34;&gt;rm&lt;/span&gt;(list &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ls&lt;/span&gt;())
+&lt;span style=&#34;color:#75715e&#34;&gt;# Remove object with &amp;#39;iris&amp;#39; in its name&lt;/span&gt;
+&lt;span style=&#34;color:#a6e22e&#34;&gt;rm&lt;/span&gt;(list &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ls&lt;/span&gt;(pattern &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;iris&amp;#34;&lt;/span&gt;))
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;code&gt;eponge&lt;/code&gt; offers a an equivalent shortcut: &lt;code&gt;erase&lt;/code&gt; function. It’s
+particularly handy when we want to select some set of objects using
+regex pattern.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# Remove all the objects&lt;/span&gt;
+eponge&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;erase&lt;/span&gt;() 
+&lt;span style=&#34;color:#75715e&#34;&gt;# Remove object with &amp;#39;iris&amp;#39; in its name&lt;/span&gt;
+eponge&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;erase&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;iris&amp;#34;&lt;/span&gt;)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;removing-objects-by-type&#34;&gt;Removing objects by type&lt;/h2&gt;
+&lt;p&gt;&lt;code&gt;epnoge&lt;/code&gt; becomes even more useful, when we want to precisely remove a
+tiny subset of objects. Normally, we would use a combination of &lt;code&gt;ls&lt;/code&gt;,
+&lt;code&gt;get&lt;/code&gt; and &lt;code&gt;rm&lt;/code&gt; functions. If we don’t want to recreate such code from
+scratch, &lt;code&gt;eponge&lt;/code&gt; do it for us:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# Erasing by type&lt;/span&gt;
+eponge&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;erase_if&lt;/span&gt;(is.character)
+&lt;span style=&#34;color:#75715e&#34;&gt;# We can use a regex pattern to identify the objects we want&lt;/span&gt;
+eponge&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;erase_functions&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;prepare_&amp;#34;&lt;/span&gt;)
+&lt;span style=&#34;color:#75715e&#34;&gt;# We can clean whole section in RStudio Envitonment tab&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;# Remove all the objects named in RStudio as &amp;#34;Data&amp;#34;&lt;/span&gt;
+eponge&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;erase_data&lt;/span&gt;()
+&lt;span style=&#34;color:#75715e&#34;&gt;# Remove all the &amp;#34;Values&amp;#34; in RStidio&lt;/span&gt;
+eponge&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;erase_values&lt;/span&gt;()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h2 id=&#34;removing-masking-objects&#34;&gt;Removing masking objects&lt;/h2&gt;
+&lt;p&gt;As we know, homonime objects mask each other. If we want to get rid of
+such objects from our environment, the most convenient way to do that is
+&lt;code&gt;eponge&lt;/code&gt;’s &lt;code&gt;erase_masking_*&lt;/code&gt; function family. At the moment, it embraces
+two functions:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;erase_masking&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;erase_masking_functions&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-r&#34; data-lang=&#34;r&#34;&gt;log &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;function&lt;/span&gt;(x) &lt;span style=&#34;color:#a6e22e&#34;&gt;print&lt;/span&gt;(&lt;span style=&#34;color:#a6e22e&#34;&gt;paste0&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Logging:&amp;#34;&lt;/span&gt;, x))
+cars &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;-&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;data.frame&lt;/span&gt;(idx   &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;10&lt;/span&gt;,
+                   speed &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;runif&lt;/span&gt;(&lt;span style=&#34;color:#ae81ff&#34;&gt;10&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;30&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;50&lt;/span&gt;))
+eponge&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;erase_masking&lt;/span&gt;()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;code&gt;eponge&lt;/code&gt; allows you to keep your R environments clean in easy way. Try
+it yourself!&lt;/p&gt;
+</description>
     </item>
     
   </channel>
