@@ -88,19 +88,20 @@ plt <-
   ggplot(selected_cities[Date > as.Date('2019-01-01')]) +
   geom_line(aes(Date, AvgTemperature, col = City)) + 
   theme_minimal() +
-  ggtitle("Temperature: Cairo vs Helsinki")
-  
-# theme(axis.line=element_blank(),axis.text.x=element_blank(),
-#           axis.text.y=element_blank(),axis.ticks=element_blank(),
-#           axis.title.x=element_blank(),
-#           axis.title.y=element_blank(),legend.position="none",
-#           panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
-#           panel.grid.minor=element_blank(),plot.background=element_blank())
-# devoutsvg::svgout("cairo-helsinki.svg")
-# plt
-# invisible(dev.off())
+  #ggtitle("Temperature: Cairo vs Helsinki")
+  theme(axis.line=element_blank(),axis.text.x=element_blank(),
+          axis.text.y=element_blank(),axis.ticks=element_blank(),
+          axis.title.x=element_blank(),
+          axis.title.y=element_blank(),legend.position="none",
+          panel.background=element_blank(),panel.border=element_blank(),panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(),plot.background=element_blank())
 
-# ggsave("cairo-helsinki.svg")
+
+devoutsvg::svgout("cairo-helsinki.svg")
+
+plt
+
+ggsave("cairo-helsinki.svg")
 # plotly::ggplotly(plt)
 ```
 

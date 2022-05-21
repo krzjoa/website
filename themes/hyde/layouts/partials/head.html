@@ -25,6 +25,39 @@
   <link type="text/css" rel="stylesheet" href="{{ .Site.BaseURL }}css/poole.css">
   <link type="text/css" rel="stylesheet" href="{{ .Site.BaseURL }}css/syntax.css">
   <link type="text/css" rel="stylesheet" href="{{ .Site.BaseURL }}css/hyde.css">
+
+  <!-- Loading mathjax macro -->
+<!-- Load mathjax -->
+    <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+    <!-- MathJax configuration -->
+    <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+            displayMath: [ ['$$','$$'], ["\\[","\\]"] ],
+            processEscapes: true,
+            processEnvironments: true
+        },
+        // Center justify equations in code and markdown cells. Elsewhere
+        // we use CSS to left justify single line equations in code cells.
+        // https://groups.google.com/g/mathjax-users/c/FgCBLdT15nM
+        displayAlign: 'center',
+        "HTML-CSS": {
+            styles: {
+              '.MathJax_Display': {"margin": 0},
+              ".MathJax .mo, .MathJax .mi": {color: "black ! important"}
+            },
+            linebreaks: { automatic: true }
+        }
+    });
+    </script>
+    <!-- End of mathjax configuration -->
+
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+
+
   {{ partial "head_fonts.html" . }}
 
 
