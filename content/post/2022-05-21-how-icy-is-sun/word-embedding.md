@@ -8,7 +8,7 @@ tags:
   - Math
 date: '2022-05-21'
 featured_image: /post/2022-05-21-how-icy-is-sun/word-embedding_files/plot_3.png
-slug: content/post/2022-05-21-how-icy-is-sun/2022-05-21-how-icy-is-sun
+slug: content/post/2022-05-21-how-icy-is-sun
 ---
 
 
