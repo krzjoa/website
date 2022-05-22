@@ -148,7 +148,7 @@ plot(points, lines, labels)
     
 
 
-As we can see, the line doesn't pass trough the origin. We have to apply **affine transformation** to shift the whole space, placing **midpoint AB** at (0, 0). If we do so, we can easily find orthogonal projection of the point C on the line 'marked' by the **B vector**. After we shift the space, the segment $MB$ becomes a vector as it has its start in the origin.
+As we can see, the line doesn't pass through the origin. We have to apply **affine transformation** to shift the whole space, placing **midpoint AB** at (0, 0). If we do so, we can easily find orthogonal projection of the point C on the line 'marked' by the **B vector**. After we shift the space, the segment $MB$ becomes a vector as it has its start in the origin.
 
 
 ```python
