@@ -236,13 +236,13 @@ proj_C = unit_vec * scalar_projection
 # Plot 
 points = transformed + [proj_C]
 lines  = [[aff_A, aff_B], [aff_C, proj_C]]
-labels = ['shifted_A', 'shifted_B', 'shifted_mid_A_B', 'shifted_C', 'proj_C']
+labels = ['shifted_A', 'shifted_B', 'shifted_M', 'shifted_C', 'proj_C']
 plot(points, lines, labels)
 ```
 
 
     
-![png](/post/2022-05-21-how-icy-is-sun/word-embedding_files/word-embedding_33_0.png)
+![png](/post/2022-05-21-how-icy-is-sun/word-embedding_files/word-embedding_32_0.png)
     
 
 
