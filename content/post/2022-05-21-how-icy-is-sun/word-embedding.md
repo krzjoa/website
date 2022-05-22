@@ -97,17 +97,6 @@ def midpoint(x: npt.NDArray, y: npt.NDArray) -> npt.NDArray:
     return (x + y) / 2
 ```
 
-
-```python
-# midpoint(np.array([2, 3]), np.array([-1, 20]))
-# midpoint(np.array([2, 3]), np.array([-1, 20, -45]))
-```
-
-
-```python
-mid = midpoint(fire.vector, ice.vector)
-```
-
 ### Plotting function
 
 
@@ -225,8 +214,8 @@ See also:
 
 ```python
 unit_vec = (aff_B) / np.linalg.norm(aff_B)
-scalar_product = unit_vec.T @ aff_C
-scalar_product
+scalar_projection = unit_vec.T @ aff_C
+scalar_projection
 ```
 
 
@@ -239,7 +228,7 @@ scalar_product
 
 ```python
 # We compute projection of C to draw a plot
-proj_C = unit_vec * scalar_product
+proj_C = unit_vec * scalar_projection
 ```
 
 
@@ -391,7 +380,7 @@ plot(shifted_points, lines, labels)
 
 
     
-![png](word-embedding_files/word-embedding_38_0.png)
+![png](/post/2022-05-21-how-icy-is-sun/word-embedding_files/word-embedding_38_0.png)
     
 
 
