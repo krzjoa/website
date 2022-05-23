@@ -446,7 +446,7 @@ ice_fire_axis.plot(
 
 
     
-![png](/post/2022-05-21-how-icy-is-sun/word-embedding_files/word-embedding_46_0.png)
+![png](/post/2022-05-21-how-icy-is-sun/word-embedding_files/word-embedding_47_0.png)
     
 
 
