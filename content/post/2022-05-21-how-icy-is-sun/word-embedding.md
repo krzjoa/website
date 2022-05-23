@@ -440,7 +440,7 @@ ice_fire_axis.plot(
         {'values': cold_values, 'labels': cold, 'color': 'tab:blue'},
         {'values': warm_values, 'labels': warm, 'color': 'tab:red'},
         poles = {'negative': {'label': 'ice', 'color': 'blue'}, 
-                 'positive': {'label': 'ice', 'color': 'red'}}
+                 'positive': {'label': 'fire', 'color': 'red'}}
     )   
 ```
 
