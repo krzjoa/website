@@ -11,16 +11,13 @@ featured_image: /post/2022-05-21-how-icy-is-sun/word-embedding_files/plot_3.png
 slug: content/post/2022-05-21-how-icy-is-sun
 ---
 
-
-# How icy is sun, how fiery is snow? Playing with word embedding vectors
-
 We all know old, good and hackneyed examples, that are typically used to intuitively explain, what the **word embedding** technique is. We almost always come across a chart presenting a simplified, 2-dimensional vector representation of the words **queen** and **king**, which are distant from each other similarly as the words **woman** and **man**. 
 
-Today, I'd like to go one step further and explore the meaning of the distance between two arbitrary selected vectors. It this particular case - distance between **ice** and **fire**.
+Today, I'd like to go one step further and explore the meaning of the mutual position of two arbitrary selected vectors. It this particular case - relation between the **ice**-and-**fire** pair and the rest of the vectors. 
 
 ## Motivation
 
-Assume for the moment we have an embedding in the 2-dimensional space. It's not a realistic case, because in most cases such low-dimensional embedding wouldn't fulfill its purpose. So, we have a bunch of vectors or points, described with two coordinates. We choose two such vectors, say **ice** and **fire**, as mentioned above.
+Assume for the moment we have an embedding in the 2-dimensional space. It's not a realistic case, because normally such low-dimensional embedding wouldn't fulfill its purpose. So, we have a bunch of vectors or points, described with two coordinates. We choose two such vectors, say **ice** and **fire**, as mentioned above.
 
 ![Drawn using https://www.geogebra.org/m/JMMKv7cx](/post/2022-05-21-how-icy-is-sun/word-embedding_files/plot_1.png)
 <center> <i>Drawn using: <a href = "https://www.geogebra.org/m/JMMKv7cx">Geogebra</a></i></center> 
@@ -30,7 +27,7 @@ Treating the straight line passing trough these points as a new axis, we project
 ![Drawn using https://www.geogebra.org/m/JMMKv7cx](/post/2022-05-21-how-icy-is-sun/word-embedding_files/plot_3.png)
 <center> <i>Drawn using: <a href = "https://www.geogebra.org/m/JMMKv7cx">Geogebra</a></i></center> 
 
-I will call the **ice** and **fire** points **poles**, to express that they show us, what is the expected meaning of being "*negativemost*" and "*positivemost*".
+I will call the **ice** and **fire** points **poles**, to express that they show us, what is the expected meaning of being "*negative*" and "*positive*".
 Briefly - I expect that embedding vectors (poinst) for "cold" words such as "winter" will get a negative value on this new axis, while "warm" words - positive values.
 In this context it means that positive-valued points are those ones, that have their projections on the "right" side of the of the new axis.
 
@@ -79,7 +76,7 @@ A couple of simple function calls, but there is a lot work done behind the scene
 ### Midpoint - origin of the new axis
 
 We will use a **midpoint** between two initial points as the origin of the our new axis.
-It can be calculated with the following formula:
+It can be calculated with the following simple formula:
 
 <center>
 $  M = (\frac{x + x_{1}}{2}, \frac{y + y_{1}}{2}, \frac{z + z_{1}}{2}, ...) $
@@ -148,7 +145,7 @@ plot(points, lines, labels)
     
 
 
-As we can see, the line doesn't pass through the origin. We have to apply **affine transformation** to shift the whole space, placing **midpoint AB** at (0, 0). If we do so, we can easily find orthogonal projection of the point C on the line 'marked' by the **B vector**. After we shift the space, the segment $MB$ becomes a vector as it has its start in the origin.
+As we can see, the line doesn't pass through the origin. We have to apply **affine transformation** to shift the whole space, placing the **midpoint AB** at (0, 0). If we do so, we can easily find orthogonal projection of the point C on the line 'marked' by the **B vector**. After we shift the space, the segment $MB$ becomes a vector as it has its start in the origin.
 
 
 ```python
@@ -248,7 +245,7 @@ plot(points, lines, labels)
 
 ## Axis class
 
-Rewriting all as a function
+Rewriting all as a class:
 
 
 ```python
@@ -455,6 +452,6 @@ ice_fire_axis.plot(
 
 ## Conclusions
 
-As we can see, in this case the meaning of the distance between "ice" and "fire" looks as expected. "Cold words" are closer to the *negative pole* while the "warm words* - to the *positive pole*.
+As we can see, in this case the meaning of the mutual position of "ice" and "fire" looks as expected. "Cold words" are closer to the *negative pole* while the "warm words* - to the *positive pole*.
 
 To do a similar experiment by yourself, you can use my [salto](https://github.com/krzjoa/salto) package.
