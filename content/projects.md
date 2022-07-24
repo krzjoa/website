@@ -85,8 +85,8 @@ document.getElementById("defaultOpen").click();
 
 <br/>
 
-<button class="tablink" onclick="openPage('R', this)" id="defaultOpen">R</button>
 <button class="tablink" onclick="openPage('Python', this)" >Python</button>
+<button class="tablink" onclick="openPage('R', this)" id="defaultOpen">R</button>
 <button class="tablink" onclick="openPage('Datasets', this)">Datasets</button>
 
 <div id="R" class="tabcontent">
@@ -153,6 +153,12 @@ document.getElementById("defaultOpen").click();
 <td><a href="https://github.com/krzjoa/kaggle-metrics"><img src='https://raw.githubusercontent.com/krzjoa/kaggle-metrics/master/img/kmlogo.png' width="100" style="margin-right: 20px" /></td>  
 <td><a href = "https://github.com/krzjoa/kaggle-metrics"><b>kaggle-metrics</b></a><br>Metrics for Kaggle competitions</td>
 </tr>
+
+<tr>
+<td><a href="https://github.com/krzjoa/salto"><img src='https://raw.githubusercontent.com/krzjoa/salto/main/img/salto-logo.png' width="100" style="margin-right: 20px" /></td>  
+<td><a href = "https://github.com/krzjoa/salto"><b>salto</b></a><br>Playing with embedding vectors</td>
+</tr>
+
 
 <tr>
 <td></td>  
