@@ -50,7 +50,10 @@ body, html {
   margin-right: 20px;
 }
 
-table {border: none;}
+table, tr, td {
+    border: none;
+}
+
 
 </style>
 
