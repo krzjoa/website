@@ -50,6 +50,11 @@ body, html {
   margin-right: 20px;
 }
 
+table {
+    border-collapse: separate;
+    border-spacing: 1em 2px; // horizontally: 2px, vertically 1em
+}
+
 </style>
 
 
