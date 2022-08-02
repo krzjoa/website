@@ -90,8 +90,8 @@ document.getElementById("defaultOpen").click();
 
 <br/>
 
-<button class="tablink" onclick="openPage('Python', this)" >Python</button>
-<button class="tablink" onclick="openPage('R', this)" id="defaultOpen">R</button>
+<button class="tablink" onclick="openPage('Python', this)" id="defaultOpen">Python</button>
+<button class="tablink" onclick="openPage('R', this)">R</button>
 <button class="tablink" onclick="openPage('Datasets', this)">Datasets</button>
 
 <div id="R" class="tabcontent">
@@ -168,6 +168,11 @@ document.getElementById("defaultOpen").click();
 <tr>
 <td></td>  
 <td><a href = "https://github.com/krzjoa/sciquence"><b>sciquence</b></a> <br>Miscellaneous algorithms for processing sequences and time series</td>
+</tr>
+
+<tr>
+<td><a href="https://github.com/krzjoa/wolne_lektury"><img src='https://raw.githubusercontent.com/krzjoa/wolne_lektury/main/img/wl_logo.png' width="100" style="margin-right: 20px" /></td>  
+<td><a href = "https://github.com/krzjoa/wolne_lektury"><b>wolne_lektury</b></a><br>An unofficial REST API client for Wolne Lektury</td>
 </tr>
 
 </thead>
