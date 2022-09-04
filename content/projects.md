@@ -113,6 +113,11 @@ document.getElementById("defaultOpen").click();
 </tr>
 
 <tr>
+<td><a href="https://krzjoa.github.io/m5"><img src='https://raw.githubusercontent.com/krzjoa/m5/master/man/figures/logo-small.png' width="100" style="margin-right: 20px" /></td>  
+<td><a href = "https://github.com/krzjoa/m5"><b>m5</b></a><br>M5 Walmart Challenge Data</td>
+</tr>
+
+<tr>
 <td><a href="https://krzjoa.github.io/matricks"><img src='https://raw.githubusercontent.com/krzjoa/matricks/master/man/figures/logo.png' width="100" style="margin-right: 20px" /></td>  
 <td><a href = "https://github.com/krzjoa/matricks"><b>matricks</b></a><br>Useful tricks for matrix manipulation</td>
 </tr>
