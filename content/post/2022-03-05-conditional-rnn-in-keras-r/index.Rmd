@@ -8,6 +8,8 @@ categories: []
 tags:
   - R
   - keras
+featured_image: /post/2019-12-28-pytorch-ts-v1/main.png
+slug: content/post/2019-12-28-pytorch-ts-v1/2019-12-28-pytorch-ts-v1
 ---
 
 Conditional RNN is one of the possible solutions if we'd like to make use of **static features**

@@ -21,6 +21,39 @@
   <link type="text/css" rel="stylesheet" href="/css/poole.css">
   <link type="text/css" rel="stylesheet" href="/css/syntax.css">
   <link type="text/css" rel="stylesheet" href="/css/hyde.css">
+
+  
+
+    <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML"></script>
+    
+    <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        tex2jax: {
+            inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+            displayMath: [ ['$$','$$'], ["\\[","\\]"] ],
+            processEscapes: true,
+            processEnvironments: true
+        },
+        // Center justify equations in code and markdown cells. Elsewhere
+        // we use CSS to left justify single line equations in code cells.
+        // https://groups.google.com/g/mathjax-users/c/FgCBLdT15nM
+        displayAlign: 'center',
+        "HTML-CSS": {
+            styles: {
+              '.MathJax_Display': {"margin": 0},
+              ".MathJax .mo, .MathJax .mi": {color: "black ! important"}
+            },
+            linebreaks: { automatic: true }
+        }
+    });
+    </script>
+    
+
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+
+
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Abril+Fatface|PT+Sans:400,400i,700">
 
 
@@ -43,7 +76,7 @@
     <nav>
       <ul class="sidebar-nav">
         <li><a href="/">Home</a> </li>
-        <li><a href="/projects/"> Projects </a></li><li><a href="/publications/"> Publications </a></li>
+        <li><a href="/2022/09/18/flat-indices-for-arrays-in-r-rcpp/"> Flat indices for arrays in R/Rcpp </a></li><li><a href="/projects/"> Projects </a></li><li><a href="/publications/"> Publications </a></li>
       </ul>
   </nav>
 
@@ -93,6 +126,9 @@
     <main class="content container">
     <ul class="posts">
 
+  <li>
+    <span><a href="/2022/05/21/content/post/2022-05-21-how-icy-is-sun/">How icy is sun, how fiery is snow? Playing with word embedding vectors</a> <time class="pull-right post-list" datetime="2022-05-21T00:00:00Z">May 21, 2022</time></span>
+  </li>
   <li>
     <span><a href="/2020/10/03/content/post/2020-10-03-ts-and-torch-1/2020-10-03-ts-and-torch-1/">Time Series &amp; torch #1 - Training a network to compute moving average</a> <time class="pull-right post-list" datetime="2020-10-03T00:00:00Z">Oct 3, 2020</time></span>
   </li>

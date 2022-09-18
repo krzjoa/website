@@ -102,14 +102,13 @@ document.getElementById("defaultOpen").click();
 <thead>
 
 <tr>
-<td><a href="https://krzjoa.github.io/torchts"><img src='https://raw.githubusercontent.com/krzjoa/torchts/master/man/figures/logo-small.png' width="100" style="margin-right: 20px" /></td>  
-<td><a href = "https://github.com/krzjoa/torchts"><b>torchts</b></a><br>Time series models with torch</td>
-</tr>
-
-
-<tr>
 <td><a href="https://krzjoa.github.io/awesome-r-dataviz"><img src='https://raw.githubusercontent.com/krzjoa/awesome-r-dataviz/master/logo/logo.png' width="100" style="margin-right: 20px" /></td>  
 <td><a href = "https://github.com/krzjoa/awesome-r-dataviz"><b>awesome-r-dataviz</b></a><br>Curated resources for Data Visualization in R.</td>
+</tr>
+
+<tr>
+<td><a href="https://krzjoa.github.io/eponge"><img src='https://raw.githubusercontent.com/krzjoa/eponge/master/man/figures/logo.png' width="100" style="margin-right: 20px" /></td>  
+<td><a href = "https://github.com/krzjoa/eponge"><b>eponge</b></a><br>Small utility which makes selective objects removing easier</td>
 </tr>
 
 <tr>
@@ -123,13 +122,13 @@ document.getElementById("defaultOpen").click();
 </tr>
 
 <tr>
-<td><a href="https://krzjoa.github.io/eponge"><img src='https://raw.githubusercontent.com/krzjoa/eponge/master/man/figures/logo.png' width="100" style="margin-right: 20px" /></td>  
-<td><a href = "https://github.com/krzjoa/eponge"><b>eponge</b></a><br>Small utility which makes selective objects removing easier</td>
+<td><a href="https://krzjoa.github.io/path.chain"><img src='https://raw.githubusercontent.com/krzjoa/path.chain/master/man/figures/logo.png' width="100" style="margin-right: 20px" /></td>  
+<td><a href = "https://github.com/krzjoa/path.chain"><b>path.chain</b></a> <br>Concise structure for path chaining</td>
 </tr>
 
 <tr>
-<td><a href="https://krzjoa.github.io/path.chain"><img src='https://raw.githubusercontent.com/krzjoa/path.chain/master/man/figures/logo.png' width="100" style="margin-right: 20px" /></td>  
-<td><a href = "https://github.com/krzjoa/path.chain"><b>path.chain</b></a> <br>Concise structure for path chaining</td>
+<td><a href="https://krzjoa.github.io/torchts"><img src='https://raw.githubusercontent.com/krzjoa/torchts/master/man/figures/logo-small.png' width="100" style="margin-right: 20px" /></td>  
+<td><a href = "https://github.com/krzjoa/torchts"><b>torchts</b></a><br>Time series models with torch</td>
 </tr>
 
 <tr>
@@ -151,7 +150,7 @@ document.getElementById("defaultOpen").click();
 
 <tr>
 <td><a href="https://krzjoa.github.io/awesome-python-data-science"><img src='https://raw.githubusercontent.com/krzjoa/awesome-python-data-science/master/img/py-datascience.png' width="100" style="margin-right: 20px" /></td>  
-<td><a href = "https://github.com/krzjoa/awesome-python-data-science"><b>awesome-python-data-science</b></a> <br>Curated resources for Data Visualization in R.</td>
+<td><a href = "https://github.com/krzjoa/awesome-python-data-science"><b>awesome-python-data-science</b></a> <br>Probably the best curated list of data science software in Python.</td>
 </tr>
 
 <tr>

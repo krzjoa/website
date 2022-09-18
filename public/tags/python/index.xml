@@ -6,7 +6,303 @@
     <description>Recent content in Python on krzjoa</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 28 Dec 2019 00:00:00 +0000</lastBuildDate><atom:link href="/tags/python/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 21 May 2022 00:00:00 +0000</lastBuildDate><atom:link href="/tags/python/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>How icy is sun, how fiery is snow? Playing with word embedding vectors</title>
+      <author>joachimiak.krzysztof@gmail.com (Krzysztof Joachimiak)</author>
+      <link>/2022/05/21/content/post/2022-05-21-how-icy-is-sun/</link>
+      <pubDate>Sat, 21 May 2022 00:00:00 +0000</pubDate>
+      
+      <guid>/2022/05/21/content/post/2022-05-21-how-icy-is-sun/</guid>
+      <description>&lt;p&gt;We all know old, good and hackneyed examples, that are typically used to intuitively explain, what the &lt;strong&gt;word embedding&lt;/strong&gt; technique is. We almost always come across a chart presenting a simplified, 2-dimensional vector representation of the words &lt;strong&gt;queen&lt;/strong&gt; and &lt;strong&gt;king&lt;/strong&gt;, which are distant from each other similarly as the words &lt;strong&gt;woman&lt;/strong&gt; and &lt;strong&gt;man&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;Today, I&amp;rsquo;d like to go one step further and explore the meaning of the mutual position of two arbitrary selected vectors. It this particular case - relation between the &lt;strong&gt;ice&lt;/strong&gt;-and-&lt;strong&gt;fire&lt;/strong&gt; pair and the rest of the vectors.&lt;/p&gt;
+&lt;h2 id=&#34;motivation&#34;&gt;Motivation&lt;/h2&gt;
+&lt;p&gt;Assume for the moment we have an embedding in the 2-dimensional space. It&amp;rsquo;s not a realistic case, because normally such low-dimensional embedding wouldn&amp;rsquo;t fulfill its purpose. So, we have a bunch of vectors or points, described with two coordinates. We choose two such vectors, say &lt;strong&gt;ice&lt;/strong&gt; and &lt;strong&gt;fire&lt;/strong&gt;, as mentioned above.&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2022-05-21-how-icy-is-sun/word-embedding_files/plot_1.png&#34; alt=&#34;Drawn using https://www.geogebra.org/m/JMMKv7cx&#34;&gt;&lt;/p&gt;
+&lt;center&gt; &lt;i&gt;Drawn using: &lt;a href = &#34;https://www.geogebra.org/m/JMMKv7cx&#34;&gt;Geogebra&lt;/a&gt;&lt;/i&gt;&lt;/center&gt; 
+&lt;p&gt;Treating the straight line passing trough these points as a new axis, we project the rest of the points onto this line. &lt;strong&gt;The midpoint&lt;/strong&gt; between &amp;ldquo;ice&amp;rdquo; and &amp;ldquo;fire&amp;rdquo; can be treated as the origin (&amp;ldquo;point 0&amp;rdquo;) of the new axis.&lt;/p&gt;
+&lt;p&gt;&lt;img src=&#34;/post/2022-05-21-how-icy-is-sun/word-embedding_files/plot_3.png&#34; alt=&#34;Drawn using https://www.geogebra.org/m/JMMKv7cx&#34;&gt;&lt;/p&gt;
+&lt;center&gt; &lt;i&gt;Drawn using: &lt;a href = &#34;https://www.geogebra.org/m/JMMKv7cx&#34;&gt;Geogebra&lt;/a&gt;&lt;/i&gt;&lt;/center&gt; 
+&lt;p&gt;I will call the &lt;strong&gt;ice&lt;/strong&gt; and &lt;strong&gt;fire&lt;/strong&gt; points &lt;strong&gt;poles&lt;/strong&gt;, to express that they show us, what is the expected meaning of being &amp;ldquo;&lt;em&gt;negative&lt;/em&gt;&amp;rdquo; and &amp;ldquo;&lt;em&gt;positive&lt;/em&gt;&amp;rdquo;.
+Briefly - I expect that embedding vectors (poinst) for &amp;ldquo;cold&amp;rdquo; words such as &amp;ldquo;winter&amp;rdquo; will get a negative value on this new axis, while &amp;ldquo;warm&amp;rdquo; words - positive values.
+In this context it means that positive-valued points are those ones, that have their projections on the &amp;ldquo;right&amp;rdquo; side of the of the new axis.&lt;/p&gt;
+&lt;p&gt;Values obtained for each point are the distances from the projections to the midpoint (with sign).&lt;/p&gt;
+&lt;h2 id=&#34;math--code-behind&#34;&gt;Math &amp;amp; code behind&lt;/h2&gt;
+&lt;p&gt;One of the most convenient ways to get &lt;strong&gt;embedding vectors&lt;/strong&gt; for natural language is to use pre-trained models distributed with &lt;a href=&#34;https://spacy.io/&#34;&gt;&lt;strong&gt;spacy&lt;/strong&gt;&lt;/a&gt; library.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; numpy &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; np
+&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; numpy.typing &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; npt
+&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; spacy
+&lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; matplotlib.pyplot &lt;span style=&#34;color:#66d9ef&#34;&gt;as&lt;/span&gt; plt
+&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; functools &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; reduce
+&lt;span style=&#34;color:#f92672&#34;&gt;from&lt;/span&gt; operator &lt;span style=&#34;color:#f92672&#34;&gt;import&lt;/span&gt; add
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# Installing en_core_web_mdn&lt;/span&gt;
+nlp &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; spacy&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;load(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;en_core_web_md&amp;#39;&lt;/span&gt;)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;fire &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; nlp(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;fire&amp;#39;&lt;/span&gt;)
+ice &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; nlp(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;ice&amp;#39;&lt;/span&gt;)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;len(fire&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vector)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;pre&gt;&lt;code&gt;300
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;A couple of simple function calls, but there is a lot work done behind the scene. We can use &lt;strong&gt;nlp&lt;/strong&gt; object to process whole sentences (or documents) at once. For now, we only need to process single words.&lt;/p&gt;
+&lt;h3 id=&#34;midpoint---origin-of-the-new-axis&#34;&gt;Midpoint - origin of the new axis&lt;/h3&gt;
+&lt;p&gt;We will use a &lt;strong&gt;midpoint&lt;/strong&gt; between two initial points as the origin of the our new axis.
+It can be calculated with the following simple formula:&lt;/p&gt;
+&lt;center&gt;
+$  M = (\frac{x + x_{1}}{2}, \frac{y + y_{1}}{2}, \frac{z + z_{1}}{2}, ...) $
+&lt;/center&gt;
+&lt;p&gt;Writing that as a function:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;midpoint&lt;/span&gt;(x: npt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;NDArray, y: npt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;NDArray) &lt;span style=&#34;color:#f92672&#34;&gt;-&amp;gt;&lt;/span&gt; npt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;NDArray:
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (len(x) &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; len(y)):
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;raise&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ValueError&lt;/span&gt;(
+            &lt;span style=&#34;color:#e6db74&#34;&gt;f&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Vectors come from different spaces! &amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; 
+            &lt;span style=&#34;color:#e6db74&#34;&gt;f&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;x: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;{&lt;/span&gt;len(x)&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; dimensions, y: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;{&lt;/span&gt;len(y)&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; dimensions&amp;#39;&lt;/span&gt;)
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; (x &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; y) &lt;span style=&#34;color:#f92672&#34;&gt;/&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;h3 id=&#34;plotting-function&#34;&gt;Plotting function&lt;/h3&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;plot&lt;/span&gt;(points, lines, labels):
+    points_x &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [x[&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;] &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; x &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; points]
+    points_y &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [x[&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;] &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; x &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; points]
+    
+    &lt;span style=&#34;color:#75715e&#34;&gt;# Lines&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; l &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; lines:
+        plt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;plot([l[&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;][&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;], l[&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;][&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;]], [l[&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;][&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;], l[&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;][&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;]])
+    
+    &lt;span style=&#34;color:#75715e&#34;&gt;# Labels&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; coords, lbl &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; zip(points, labels):
+        plt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;text(coords[&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;], coords[&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;], lbl)
+    
+    &lt;span style=&#34;color:#75715e&#34;&gt;# Points&lt;/span&gt;
+    plt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;plot(points_x, points_y, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.&amp;#39;&lt;/span&gt;)
+    plt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;grid()
+    plt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;axhline(linewidth&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, color&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;black&amp;#39;&lt;/span&gt;)
+    plt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;axvline(linewidth&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, color&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;black&amp;#39;&lt;/span&gt;)
+    plt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;axis(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;equal&amp;#39;&lt;/span&gt;)
+    plt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;show()
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# Points lying on the straight line&lt;/span&gt;
+A &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;array([&lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;10&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;])
+B &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;array([&lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;18&lt;/span&gt;]) &lt;span style=&#34;color:#75715e&#34;&gt;# 18&lt;/span&gt;
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# a = np.array([2, 2])&lt;/span&gt;
+&lt;span style=&#34;color:#75715e&#34;&gt;# b = np.array([-2, -2])&lt;/span&gt;
+
+M &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; midpoint(A, B)
+
+C &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;array([&lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;6&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;15&lt;/span&gt;])
+
+points &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [A, B, M, C]
+lines  &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [[A, B]]
+labels &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;A&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;B&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;M&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;C&amp;#39;&lt;/span&gt;]
+
+plot(points, lines, labels)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img src=&#34;/post/2022-05-21-how-icy-is-sun/word-embedding_files/word-embedding_23_0.png&#34; alt=&#34;png&#34;&gt;&lt;/p&gt;
+&lt;p&gt;As we can see, the line doesn&amp;rsquo;t pass through the origin. We have to apply &lt;strong&gt;affine transformation&lt;/strong&gt; to shift the whole space, placing the &lt;strong&gt;midpoint AB&lt;/strong&gt; at (0, 0). If we do so, we can easily find orthogonal projection of the point C on the line &amp;lsquo;marked&amp;rsquo; by the &lt;strong&gt;B vector&lt;/strong&gt;. After we shift the space, the segment $MB$ becomes a vector as it has its start in the origin.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;transform_matrix &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;eye(&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;)
+transform_matrix[&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;:&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;, &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;M
+transform_matrix
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;pre&gt;&lt;code&gt;array([[  1. ,   0. ,   2.5],
+       [  0. ,   1. , -10. ],
+       [  0. ,   0. ,   1. ]])
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If you&amp;rsquo;d like to know more details, how to construct the transformation matrix, see for example &lt;a href=&#34;https://articulatedrobotics.xyz/5-transformation_matrices/&#34;&gt;Affine Transformation Matrices&lt;/a&gt;.&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# tranformed_a = affine_transform_matrix @ np.vstack(a.T, [1])&lt;/span&gt;
+&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;extend_with_one&lt;/span&gt;(vec):
+    vec &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; vec[np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;newaxis]&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;T
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vstack([vec, [&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;]])  
+
+transposed  &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [extend_with_one(p) &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; p &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; points]
+transformed &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [transform_matrix &lt;span style=&#34;color:#f92672&#34;&gt;@&lt;/span&gt; vec &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; vec &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; transposed]
+&lt;span style=&#34;color:#75715e&#34;&gt;# Removing last dimension with &amp;#39;1&amp;#39;&lt;/span&gt;
+transformed &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [vec[&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;:&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;] &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; vec &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; transformed]
+aff_A, aff_B, aff_M, aff_C &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; transformed
+
+lines  &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [[aff_A, aff_B]]
+labels &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;shifted_A&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;shifted_B&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;shifted_M&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;shifted_C&amp;#39;&lt;/span&gt;]
+
+plot(transformed, lines, labels)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img src=&#34;/post/2022-05-21-how-icy-is-sun/word-embedding_files/word-embedding_27_0.png&#34; alt=&#34;png&#34;&gt;&lt;/p&gt;
+&lt;h3 id=&#34;scalar-projection&#34;&gt;Scalar projection&lt;/h3&gt;
+&lt;p&gt;We want to compute the &lt;a href=&#34;https://en.wikipedia.org/wiki/Scalar_projection&#34;&gt;scalar projection&lt;/a&gt; of $\bf{v}$ on $\bf{w}$ using the left-hand side of the following equation:&lt;/p&gt;
+&lt;center&gt;
+${\hat{\bf{w}}}^{T}\bf{v} = |\bf{v}| cos\theta $
+&lt;/center&gt;
+&lt;p&gt;When $\theta$ is the angle between $\bf{w}$ and $\bf{v}$, and $\hat{\bf{w}}$ is the &lt;strong&gt;unit vector&lt;/strong&gt;, namely:&lt;/p&gt;
+&lt;center&gt;
+$\hat{\bf{w}} = \frac{\bf{w}}{|\bf{w}|} $
+&lt;/center&gt;
+&lt;p&gt;See also:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;a href=&#34;https://mathinsight.org/dot_product&#34;&gt;The dot product&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&#34;https://www.youtube.com/watch?v=LyGKycYT2v0&amp;amp;list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab&amp;amp;index=9&amp;amp;t=216s&#34;&gt;Dot products duality by 3Blue1Brown&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;unit_vec &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; (aff_B) &lt;span style=&#34;color:#f92672&#34;&gt;/&lt;/span&gt; np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;linalg&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;norm(aff_B)
+scalar_projection &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; unit_vec&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;T &lt;span style=&#34;color:#f92672&#34;&gt;@&lt;/span&gt; aff_C
+scalar_projection
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;pre&gt;&lt;code&gt;array([[1.25389207]])
+&lt;/code&gt;&lt;/pre&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# We compute projection of C to draw a plot&lt;/span&gt;
+proj_C &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; unit_vec &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; scalar_projection
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# Plot &lt;/span&gt;
+points &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; transformed &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; [proj_C]
+lines  &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [[aff_A, aff_B], [aff_C, proj_C]]
+labels &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;shifted_A&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;shifted_B&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;shifted_M&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;shifted_C&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;proj_C&amp;#39;&lt;/span&gt;]
+plot(points, lines, labels)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img src=&#34;/post/2022-05-21-how-icy-is-sun/word-embedding_files/word-embedding_32_0.png&#34; alt=&#34;png&#34;&gt;&lt;/p&gt;
+&lt;h2 id=&#34;axis-class&#34;&gt;Axis class&lt;/h2&gt;
+&lt;p&gt;Rewriting all as a class:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;axis&lt;/span&gt;:
+
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; __init__(self, negative_pole: npt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;NDArray, positive_pole: npt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;NDArray):
+        
+        self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;dims &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; len(negative_pole)
+        
+        &lt;span style=&#34;color:#75715e&#34;&gt;# Original values&lt;/span&gt;
+        self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;negative_pole &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; negative_pole 
+        self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;positive_pole &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; positive_pole
+        self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;midpoint &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; _midpoint(negative_pole, positive_pole)  
+        
+        &lt;span style=&#34;color:#75715e&#34;&gt;# Transformation&lt;/span&gt;
+        self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;transform &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; _transformation_matrix(self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;dims, self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;midpoint)       
+        self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;shifted_negative_pole &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;_shift(negative_pole)
+        self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;shifted_positive_pole &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;_shift(positive_pole)
+        
+        self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;unit_vector &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;shifted_positive_pole &lt;span style=&#34;color:#f92672&#34;&gt;/&lt;/span&gt; np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;linalg&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;norm(self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;shifted_positive_pole)      &lt;span style=&#34;color:#75715e&#34;&gt;# shifted_midpoint is (0, 0, ...) &lt;/span&gt;
+
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; __call__(self, vector: npt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;NDArray):
+        
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (len(vector) &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;dims):
+            &lt;span style=&#34;color:#66d9ef&#34;&gt;raise&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ValueError&lt;/span&gt;(
+                &lt;span style=&#34;color:#e6db74&#34;&gt;f&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Vector length is &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;{&lt;/span&gt;len(vector)&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;, but it should equal &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;{&lt;/span&gt;self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;dims&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;&lt;/span&gt; 
+            )
+        
+        shifted_vector &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;_shift(vector)
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; (self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;unit_vector&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;T &lt;span style=&#34;color:#f92672&#34;&gt;@&lt;/span&gt; shifted_vector)[&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;]
+    
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;plot&lt;/span&gt;(self, &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;args, title &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Embedding vectors&amp;#34;&lt;/span&gt;, figsize &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; (&lt;span style=&#34;color:#ae81ff&#34;&gt;10&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;), 
+             poles &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; {&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;negative&amp;#39;&lt;/span&gt;: {&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;label&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Negative pole&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;color&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;blue&amp;#39;&lt;/span&gt;}, 
+                      &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;positive&amp;#39;&lt;/span&gt;: {&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;label&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Positive pole&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;color&amp;#39;&lt;/span&gt;:&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;red&amp;#39;&lt;/span&gt;}}):
+   
+        &lt;span style=&#34;color:#75715e&#34;&gt;# Init plot&lt;/span&gt;
+        fig, ax &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; plt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;subplots(figsize&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;figsize, constrained_layout&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;True&lt;/span&gt;)
+        ax&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;set(title&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;title)
+        
+        &lt;span style=&#34;color:#75715e&#34;&gt;# Horizontal line       &lt;/span&gt;
+        neg_value &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; self(self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;negative_pole)
+        pos_value &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; self(self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;positive_pole)
+        
+        all_values &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; reduce(add, [a[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;values&amp;#39;&lt;/span&gt;] &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; a &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; args])
+        all_values &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; all_values &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; [neg_value, pos_value]
+        
+        ax&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;plot(all_values, np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;zeros_like(all_values), &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;-o&amp;#34;&lt;/span&gt;,
+        color&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;k&amp;#34;&lt;/span&gt;, markerfacecolor&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;w&amp;#34;&lt;/span&gt;)  &lt;span style=&#34;color:#75715e&#34;&gt;# Baseline and markers on it.&lt;/span&gt;
+        
+        &lt;span style=&#34;color:#75715e&#34;&gt;# Generate colours if not defined&lt;/span&gt;
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; group &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; args:
+
+            values &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; group[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;values&amp;#39;&lt;/span&gt;]
+            labels &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; group[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;labels&amp;#39;&lt;/span&gt;]
+            color  &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; group[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;color&amp;#39;&lt;/span&gt;]
+            
+            levels &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;tile([&lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;, &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;, &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;],
+                 int(np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;ceil(len(values)&lt;span style=&#34;color:#f92672&#34;&gt;/&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;6&lt;/span&gt;)))[:len(values)]
+            
+            ax&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vlines(values, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, levels, color&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;color)  
+            vert &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;array([&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;top&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;bottom&amp;#39;&lt;/span&gt;])[(levels &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;astype(int)]
+
+            &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; d, l, r, va &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; zip(values, levels, labels, vert):
+                ax&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;annotate(r, xy&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;(d, l), xytext&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;(&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;, np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;sign(l)&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;),
+                            textcoords&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;offset points&amp;#34;&lt;/span&gt;, va&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;va, ha&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;right&amp;#34;&lt;/span&gt;)
+        
+        &lt;span style=&#34;color:#75715e&#34;&gt;# Show poles&lt;/span&gt;
+        neg_pole &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; poles[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;negative&amp;#39;&lt;/span&gt;]
+        pos_pole &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; poles[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;positive&amp;#39;&lt;/span&gt;]
+
+        ax&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vlines(neg_value, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;, neg_pole[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;color&amp;#39;&lt;/span&gt;])  
+        ax&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;annotate(neg_pole[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;label&amp;#39;&lt;/span&gt;], xy&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;(neg_value, &lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;), xytext&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;(&lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;, np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;sign(&lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;),
+            textcoords&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;offset points&amp;#34;&lt;/span&gt;, va&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;va, ha&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;right&amp;#34;&lt;/span&gt;, weight&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;bold&amp;#39;&lt;/span&gt;)
+
+        ax&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vlines(pos_value, &lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;, color&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;pos_pole[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;color&amp;#39;&lt;/span&gt;])  
+        ax&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;annotate(pos_pole[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;label&amp;#39;&lt;/span&gt;], xy&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;(pos_value, &lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;), xytext&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;(&lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;, np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;sign(&lt;span style=&#34;color:#ae81ff&#34;&gt;4&lt;/span&gt;)&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;3&lt;/span&gt;),
+            textcoords&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;offset points&amp;#34;&lt;/span&gt;, va&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;va, ha&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;right&amp;#34;&lt;/span&gt;, weight&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;bold&amp;#39;&lt;/span&gt;)
+        
+        &lt;span style=&#34;color:#75715e&#34;&gt;# Show the plot&lt;/span&gt;
+        ax&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;yaxis&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;set_visible(&lt;span style=&#34;color:#66d9ef&#34;&gt;False&lt;/span&gt;)
+        ax&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;spines[[&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;left&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;top&amp;#34;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;right&amp;#34;&lt;/span&gt;]]&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;set_visible(&lt;span style=&#34;color:#66d9ef&#34;&gt;False&lt;/span&gt;)
+        ax&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;margins(y&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;0.1&lt;/span&gt;)
+        plt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;show()
+
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;_shift&lt;/span&gt;(self, vector: npt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;NDArray):
+        extended_vector &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; _extend_with_one(vector)
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; (self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;transform &lt;span style=&#34;color:#f92672&#34;&gt;@&lt;/span&gt; extended_vector)[&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;:self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;dims]
+    
+        
+&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;_extend_with_one&lt;/span&gt;(vector: npt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;NDArray) &lt;span style=&#34;color:#f92672&#34;&gt;-&amp;gt;&lt;/span&gt; npt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;NDArray:
+    vector &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; vector[np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;newaxis]&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;T
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vstack([vector, [&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;]])      
+
+&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;_transformation_matrix&lt;/span&gt;(dims: int, midpoint: npt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;NDArray) &lt;span style=&#34;color:#f92672&#34;&gt;-&amp;gt;&lt;/span&gt; npt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;NDArray:
+    mat &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;eye(dims &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;)
+    mat[&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;:dims, &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;1&lt;/span&gt;] &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;midpoint
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; mat   
+    
+&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;_midpoint&lt;/span&gt;(x: npt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;NDArray, y: npt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;NDArray) &lt;span style=&#34;color:#f92672&#34;&gt;-&amp;gt;&lt;/span&gt; npt&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;NDArray:
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;if&lt;/span&gt; (len(x) &lt;span style=&#34;color:#f92672&#34;&gt;!=&lt;/span&gt; len(y)):
+        &lt;span style=&#34;color:#66d9ef&#34;&gt;raise&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ValueError&lt;/span&gt;(
+            &lt;span style=&#34;color:#e6db74&#34;&gt;f&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Vectors come from different spaces! &amp;#39;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; 
+            &lt;span style=&#34;color:#e6db74&#34;&gt;f&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;x: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;{&lt;/span&gt;len(x)&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; dimensions, y: &lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;{&lt;/span&gt;len(y)&lt;span style=&#34;color:#e6db74&#34;&gt;}&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt; dimensions&amp;#39;&lt;/span&gt;)
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; (x &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; y) &lt;span style=&#34;color:#f92672&#34;&gt;/&lt;/span&gt; &lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;Last quick check with a simplified example:&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# Points lying on the straight line&lt;/span&gt;
+A &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;array([&lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;10&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;])
+B &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;array([&lt;span style=&#34;color:#ae81ff&#34;&gt;5&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;18&lt;/span&gt;]) &lt;span style=&#34;color:#75715e&#34;&gt;# 18&lt;/span&gt;
+C &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; np&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;array([&lt;span style=&#34;color:#f92672&#34;&gt;-&lt;/span&gt;&lt;span style=&#34;color:#ae81ff&#34;&gt;6&lt;/span&gt;, &lt;span style=&#34;color:#ae81ff&#34;&gt;15&lt;/span&gt;])
+
+axis_a_b &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; axis(A, B)
+
+points &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [A, B, C, axis_a_b&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;midpoint]
+shifted_points &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [axis_a_b&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;_shift(p) &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; p &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; points]
+proj_C &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; axis_a_b(C) &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; axis_a_b&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;unit_vector
+shifted_points &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; shifted_points &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; [proj_C]
+
+shifted_A, shifted_B, shifted_C, shifted_M, _  &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; shifted_points
+
+lines  &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [[shifted_A, shifted_B], [shifted_C, proj_C]]
+labels &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;shifted_A&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;shifted_B&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;shifted_C&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;shifted_M&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;proj_C&amp;#39;&lt;/span&gt;]
+plot(shifted_points, lines, labels)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img src=&#34;/post/2022-05-21-how-icy-is-sun/word-embedding_files/word-embedding_38_0.png&#34; alt=&#34;png&#34;&gt;&lt;/p&gt;
+&lt;h2 id=&#34;experiment-with-embeddings&#34;&gt;Experiment with embeddings&lt;/h2&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;ice_fire_axis &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; axis(ice&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vector, fire&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vector)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#75715e&#34;&gt;# Ice&lt;/span&gt;
+ice_value &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; ice_fire_axis(ice&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vector)
+
+&lt;span style=&#34;color:#75715e&#34;&gt;# Fire&lt;/span&gt;
+fire_value &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; ice_fire_axis(fire&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vector)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;cold &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;polar&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;snow&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;winter&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;fridge&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Antarctica&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;freeze&amp;#39;&lt;/span&gt;]
+warm &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;tropical&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;sun&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;summer&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;oven&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;Africa&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;flame&amp;#39;&lt;/span&gt;]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;cold_vecs &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [nlp(w)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vector &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; w &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; cold]
+warm_vecs &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [nlp(w)&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;vector &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; w &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; warm]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;cold_values &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [ice_fire_axis(p) &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; p &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; cold_vecs]
+warm_values &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; [ice_fire_axis(p) &lt;span style=&#34;color:#66d9ef&#34;&gt;for&lt;/span&gt; p &lt;span style=&#34;color:#f92672&#34;&gt;in&lt;/span&gt; warm_vecs]
+warm_values
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;pre&gt;&lt;code&gt;[-0.179010129140625,
+ 0.7686063030627324,
+ 0.21483235444847368,
+ 0.5769307333087565,
+ 0.830039105765312,
+ 2.751032938467553]
+&lt;/code&gt;&lt;/pre&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;all_values &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; cold_values &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; warm_values &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; [ice_value, fire_value]
+all_labels &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; cold &lt;span style=&#34;color:#f92672&#34;&gt;+&lt;/span&gt; warm
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;ice_fire_axis&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;plot(
+        {&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;values&amp;#39;&lt;/span&gt;: cold_values, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;labels&amp;#39;&lt;/span&gt;: cold, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;color&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;tab:blue&amp;#39;&lt;/span&gt;},
+        {&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;values&amp;#39;&lt;/span&gt;: warm_values, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;labels&amp;#39;&lt;/span&gt;: warm, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;color&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;tab:red&amp;#39;&lt;/span&gt;},
+        poles &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; {&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;negative&amp;#39;&lt;/span&gt;: {&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;label&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;ice&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;color&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;blue&amp;#39;&lt;/span&gt;}, 
+                 &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;positive&amp;#39;&lt;/span&gt;: {&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;label&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;fire&amp;#39;&lt;/span&gt;, &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;color&amp;#39;&lt;/span&gt;: &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;red&amp;#39;&lt;/span&gt;}}
+    )   
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;&lt;img src=&#34;/post/2022-05-21-how-icy-is-sun/word-embedding_files/word-embedding_47_0.png&#34; alt=&#34;png&#34;&gt;&lt;/p&gt;
+&lt;h2 id=&#34;conclusions&#34;&gt;Conclusions&lt;/h2&gt;
+&lt;p&gt;As we can see, in this case the meaning of the mutual position of &amp;ldquo;ice&amp;rdquo; and &amp;ldquo;fire&amp;rdquo; looks as expected. &amp;ldquo;Cold words&amp;rdquo; are closer to the &lt;em&gt;negative pole&lt;/em&gt; while the &amp;ldquo;warm words* - to the &lt;em&gt;positive pole&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;To do a similar experiment by yourself, you can use my &lt;a href=&#34;https://github.com/krzjoa/salto&#34;&gt;salto&lt;/a&gt; package.&lt;/p&gt;
+</description>
+    </item>
+    
     <item>
       <title>Time Series &amp; PyTorch - Training network to compute moving average</title>
       <author>joachimiak.krzysztof@gmail.com (Krzysztof Joachimiak)</author>

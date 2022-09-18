@@ -6,24 +6,24 @@
     <description>Recent content in Tags on krzjoa</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 05 Mar 2022 00:00:00 +0000</lastBuildDate><atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
-    <item>
-      <title>keras</title>
-      <author>joachimiak.krzysztof@gmail.com (Krzysztof Joachimiak)</author>
-      <link>/tags/keras/</link>
-      <pubDate>Sat, 05 Mar 2022 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/keras/</guid>
-      <description></description>
-    </item>
-    
+    <lastBuildDate>Sun, 18 Sep 2022 00:00:00 +0000</lastBuildDate><atom:link href="/tags/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>R</title>
       <author>joachimiak.krzysztof@gmail.com (Krzysztof Joachimiak)</author>
       <link>/tags/r/</link>
-      <pubDate>Sat, 05 Mar 2022 00:00:00 +0000</pubDate>
+      <pubDate>Sun, 18 Sep 2022 00:00:00 +0000</pubDate>
       
       <guid>/tags/r/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Rcpp</title>
+      <author>joachimiak.krzysztof@gmail.com (Krzysztof Joachimiak)</author>
+      <link>/tags/rcpp/</link>
+      <pubDate>Sun, 18 Sep 2022 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/rcpp/</guid>
       <description></description>
     </item>
     
@@ -31,9 +31,59 @@
       <title>EN</title>
       <author>joachimiak.krzysztof@gmail.com (Krzysztof Joachimiak)</author>
       <link>/tags/en/</link>
-      <pubDate>Sat, 03 Oct 2020 00:00:00 +0000</pubDate>
+      <pubDate>Sat, 21 May 2022 00:00:00 +0000</pubDate>
       
       <guid>/tags/en/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Math</title>
+      <author>joachimiak.krzysztof@gmail.com (Krzysztof Joachimiak)</author>
+      <link>/tags/math/</link>
+      <pubDate>Sat, 21 May 2022 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/math/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>NLP</title>
+      <author>joachimiak.krzysztof@gmail.com (Krzysztof Joachimiak)</author>
+      <link>/tags/nlp/</link>
+      <pubDate>Sat, 21 May 2022 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/nlp/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Python</title>
+      <author>joachimiak.krzysztof@gmail.com (Krzysztof Joachimiak)</author>
+      <link>/tags/python/</link>
+      <pubDate>Sat, 21 May 2022 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/python/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Word Embedding</title>
+      <author>joachimiak.krzysztof@gmail.com (Krzysztof Joachimiak)</author>
+      <link>/tags/word-embedding/</link>
+      <pubDate>Sat, 21 May 2022 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/word-embedding/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>keras</title>
+      <author>joachimiak.krzysztof@gmail.com (Krzysztof Joachimiak)</author>
+      <link>/tags/keras/</link>
+      <pubDate>Sat, 05 Mar 2022 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/keras/</guid>
       <description></description>
     </item>
     
@@ -104,16 +154,6 @@
       <pubDate>Sat, 29 Feb 2020 00:00:00 +0000</pubDate>
       
       <guid>/tags/matricks/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Python</title>
-      <author>joachimiak.krzysztof@gmail.com (Krzysztof Joachimiak)</author>
-      <link>/tags/python/</link>
-      <pubDate>Sat, 28 Dec 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/python/</guid>
       <description></description>
     </item>
     
