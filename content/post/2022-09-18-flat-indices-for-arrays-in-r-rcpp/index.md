@@ -5,7 +5,6 @@ date: '2022-09-18'
 output: md_document
 categories: []
 tags:
-  - R
   - Rcpp
 featured_image: /post/2022-09-18-flat-indices-for-arrays-in-r-rcpp/flat_array_v2.jpg
 slug: content/post/2022-09-18-flat-indices-for-arrays-in-r-rcpp/2022-09-18-flat-indices-for-arrays-in-r-rcpp
@@ -25,7 +24,8 @@ three-element index for the **3-dimensional** arrays.
 
 Let's create a sample array to present the problem.
 
-```{r array}
+
+```r
 data <- array(0, c(20, 7, 5))
 ```
 
@@ -33,9 +33,14 @@ To get the single element, an array can be subscripted in two ways:
 
 * **using indices for all the existing dimensions**
 
-```{r all_indices}
+
+```r
 data[12, 3, 1] <- 7
 data[12, 3, 1]
+```
+
+```
+## [1] 7
 ```
 
 * **using a single index**
@@ -43,9 +48,14 @@ data[12, 3, 1]
 In this approach the array is treated as a **flat vector**, so I named this kind of
 indexing **flat index**.
 
-```{r flat_index}
+
+```r
 data[123] <- 8
 data[123]
+```
+
+```
+## [1] 8
 ```
 **But how we can easily tranform the first type of indexing into the second one?**
 
@@ -62,20 +72,27 @@ where $x_i$ means i-th index and $d_i$ i-th dimension size. This solution takes 
 Suppose we have an array with the same dimesnions as shown above: $(20, 7, 5)$.
 We'd like to access an element at index $(11, 3, 2)$.
 
-```{r example}
+
+```r
 example <- array(0, c(20, 7, 5))
 example[11, 3, 2] <- 7
 ```
 
 We calculate the *flat index* according to the aforementioned schema.
-```{r flat_ind}
+
+```r
 flat_idx <- 11 + (3 - 1) * 20 + (2 - 1) * 20 * 7
 example[flat_idx]
+```
+
+```
+## [1] 7
 ```
 ## Code snippets
 
 In R code;
-```{r flat_index_function}
+
+```r
 #' Get an index you can use access an array element at once 
 #' [x, y, z] = x + (y - 1) * x_dim + (z - 1) * x_dim * y_dim
 #' [x, y] = x + (y-1) * x_dim
@@ -87,20 +104,45 @@ flat_index <- function(dim_sizes, dim_indices){
 }
 ```
 
-```{r example_1}
+
+```r
 # Example 1
 arr <- array(0, c(4,5,6,7))
 arr[1,2,3,4] <- 777
 
 flat_index(c(4,5,6,7), c(1,2,3,4))
-which(arr == 777)
+```
 
+```
+## [1] 405
+```
+
+```r
+which(arr == 777)
+```
+
+```
+## [1] 405
+```
+
+```r
 # Example 2
 arr2 <- array(0, c(32,10,5))
 arr2[12,8,4] <- 777
 
 flat_index( c(32,10,5), c(12,8,4))
+```
+
+```
+## [1] 1196
+```
+
+```r
 which(arr2 == 777)
+```
+
+```
+## [1] 1196
 ```
 
 In **Rcpp**, you can use the following code snippet (for 3-dimensional arrays):
