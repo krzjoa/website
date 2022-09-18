@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>/2022/09/18/flat-indices-for-arrays-in-r-rcpp/</loc>
+    <loc>/2022/09/18/content/post/2022-09-18-flat-indices-for-arrays-in-r-rcpp/2022-09-18-flat-indices-for-arrays-in-r-rcpp/</loc>
     <lastmod>2022-09-18T00:00:00+00:00</lastmod>
   </url><url>
     <loc>/</loc>
@@ -12,9 +12,6 @@
     <lastmod>2022-09-18T00:00:00+00:00</lastmod>
   </url><url>
     <loc>/tags/r/</loc>
-    <lastmod>2022-09-18T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>/tags/rcpp/</loc>
     <lastmod>2022-09-18T00:00:00+00:00</lastmod>
   </url><url>
     <loc>/tags/</loc>

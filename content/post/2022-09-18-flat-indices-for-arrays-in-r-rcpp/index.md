@@ -1,13 +1,13 @@
 ---
 title: 'Flat indices for arrays in R/Rcpp'
-author: ''
+author: 'Krzysztof Joachimiak'
 date: '2022-09-18'
 output: md_document
-categories: []
-tags:
-  - Rcpp
 featured_image: /post/2022-09-18-flat-indices-for-arrays-in-r-rcpp/flat_array_v2.jpg
 slug: content/post/2022-09-18-flat-indices-for-arrays-in-r-rcpp/2022-09-18-flat-indices-for-arrays-in-r-rcpp
+categories: []
+tags:
+  - R
 ---
 
 <a><img src='/post/2022-09-18-flat-indices-for-arrays-in-r-rcpp/flat_array_v2.jpg' align="center"/></a>
@@ -147,7 +147,7 @@ which(arr2 == 777)
 
 In **Rcpp**, you can use the following code snippet (for 3-dimensional arrays):
 
-```{c++}
+```{c
 // In C++ transformed to the zero-based index
 int flat_index(int dim1, int dim2,
                int idx1, int idx2, int idx3){
