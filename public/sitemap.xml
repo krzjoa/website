@@ -2,25 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>/2022/09/18/content/post/2022-09-18-flat-indices-for-arrays-in-r-rcpp/2022-09-18-flat-indices-for-arrays-in-r-rcpp/</loc>
-    <lastmod>2022-09-18T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>/</loc>
-    <lastmod>2022-09-18T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>/post/</loc>
-    <lastmod>2022-09-18T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>/tags/r/</loc>
-    <lastmod>2022-09-18T00:00:00+00:00</lastmod>
-  </url><url>
-    <loc>/tags/</loc>
-    <lastmod>2022-09-18T00:00:00+00:00</lastmod>
-  </url><url>
     <loc>/tags/en/</loc>
     <lastmod>2022-05-21T00:00:00+00:00</lastmod>
   </url><url>
     <loc>/2022/05/21/content/post/2022-05-21-how-icy-is-sun/</loc>
+    <lastmod>2022-05-21T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>/</loc>
     <lastmod>2022-05-21T00:00:00+00:00</lastmod>
   </url><url>
     <loc>/tags/math/</loc>
@@ -29,7 +17,13 @@
     <loc>/tags/nlp/</loc>
     <lastmod>2022-05-21T00:00:00+00:00</lastmod>
   </url><url>
+    <loc>/post/</loc>
+    <lastmod>2022-05-21T00:00:00+00:00</lastmod>
+  </url><url>
     <loc>/tags/python/</loc>
+    <lastmod>2022-05-21T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>/tags/</loc>
     <lastmod>2022-05-21T00:00:00+00:00</lastmod>
   </url><url>
     <loc>/tags/word-embedding/</loc>
@@ -39,6 +33,9 @@
     <lastmod>2022-03-05T00:00:00+00:00</lastmod>
   </url><url>
     <loc>/tags/keras/</loc>
+    <lastmod>2022-03-05T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>/tags/r/</loc>
     <lastmod>2022-03-05T00:00:00+00:00</lastmod>
   </url><url>
     <loc>/2020/10/03/content/post/2020-10-03-ts-and-torch-1/2020-10-03-ts-and-torch-1/</loc>
