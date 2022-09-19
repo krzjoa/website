@@ -7,6 +7,7 @@ categories: []
 tags:
   - R
   - Rcpp
+slug: content/post/2022-09-19-flat-indices-for-arrays-in-r-rcpp
 featured_image: /post/2022-09-19-flat-indices-for-arrays-in-r-rcpp/flat_array_v2.jpg
 ---
 
