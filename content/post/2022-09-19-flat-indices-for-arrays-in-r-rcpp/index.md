@@ -65,7 +65,7 @@ data[123]
 
 The solution generalized to the $n$-dimensional case can be expressed as:
 
-<center>$[x_1, x_2, x_3, ..., x_n] = x_1 + \sum_{i=2}^{n}x_i\prod_{j = 1}^{i-1}d_j$</center>  
+<center>$[x_1, x_2, x_3, ..., x_n] = x_1 + \sum_{i=2}^{n}(x_i-1)\prod_{j = 1}^{i-1}d_j$</center>  
 
 where $x_i$ means i-th index and $d_i$ i-th dimension size. This solution takes into account the 1-based indexing which is used in R.
 
